@@ -344,6 +344,7 @@ def play_resolve_movies(param):
 
 @route('/play_resolve_series')
 def play_resolve_series(param):
+    notify('Aguarde')
     # json_rpc_command = '''
     # {
     #     "jsonrpc": "2.0",

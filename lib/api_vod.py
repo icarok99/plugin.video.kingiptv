@@ -23,7 +23,15 @@ class VOD:
                 r = cfscraper.get(url)
                 src = r.text
                 soup = BeautifulSoup(src, 'html.parser')
-                div = soup.find('div', class_='episodeOption active')
+                try:
+                    div = soup.find('episode-item', class_='episodeOption active')
+                except:
+                    div = {}
+                if not div:
+                    try:
+                        div = soup.find('div', class_='episodeOption active')
+                    except:
+                        div = {}
                 data_contentid = div['data-contentid']
                 api = '{0}/api'.format(self.base)
                 r = cfscraper.post(api,data={'action': 'getOptions', 'contentid': data_contentid})

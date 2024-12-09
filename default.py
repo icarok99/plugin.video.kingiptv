@@ -247,7 +247,7 @@ def open_imdb_seasons(param):
     if itens:
         setcontent('tvshows')
         try:
-            addMenuItem({'name': '::: ' + serie_name + ':::', 'description': '', 'iconimage': serie_icon}, destiny='')
+            addMenuItem({'name': serie_name, 'description': '', 'iconimage': serie_icon}, destiny='')
         except:
             pass
         for i in itens:
@@ -267,7 +267,7 @@ def open_imdb_episodes(param):
     if itens:
         setcontent('tvshows')
         try:
-            addMenuItem({'name': '::: ' + serie_name + ' - S' + str(season) + ':::', 'description': '', 'iconimage': serie_icon}, destiny='')
+            addMenuItem({'name': serie_name + ' ' + str(season) + ' temporada', 'description': '', 'iconimage': serie_icon}, destiny='')
         except:
             pass 
         for i in itens:
@@ -344,6 +344,7 @@ def play_resolve_movies(param):
 
 @route('/play_resolve_series')
 def play_resolve_series(param):
+    notify('Aguarde')
     # json_rpc_command = '''
     # {
     #     "jsonrpc": "2.0",

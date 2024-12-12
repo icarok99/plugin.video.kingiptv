@@ -59,7 +59,7 @@ class IMDBScraper:
                     img = ''
                 # if year:
                 #     name = name + ' (' + str(year) + ')'
-                name = name.replace('&amp;', '&').replace('&apos;', "'")
+                name = name.replace('&', '&').replace('&apos;', "'")
                 itens.append((name,img,page,year,imdb_id))
         except:
             pass       
@@ -89,8 +89,8 @@ class IMDBScraper:
                     #genre = data['genre']
                     imdb_id = re.findall(r'/tt(.*?)/', url)[0]
                     imdb_id = 'tt' + imdb_id
-                    name = name.replace('&amp;', '&').replace('&apos;', "'")
-                    description = description.replace('&amp;', '&').replace('&apos;', "'")                    
+                    name = name.replace('&', '&').replace('&apos;', "'")
+                    description = description.replace('&', '&').replace('&apos;', "'")                    
                     itens.append((name,image,url,description,imdb_id))
         except:
             pass
@@ -119,8 +119,8 @@ class IMDBScraper:
                     #genre = data['genre']
                     imdb_id = re.findall(r'/tt(.*?)/', url)[0]
                     imdb_id = 'tt' + imdb_id
-                    name = name.replace('&amp;', '&').replace('&apos;', "'")
-                    description = description.replace('&amp;', '&').replace('&apos;', "'")
+                    name = name.replace('&', '&').replace('&apos;', "'")
+                    description = description.replace('&', '&').replace('&apos;', "'")
                     itens.append((name,image,url,description,imdb_id))
         except:
             pass 
@@ -139,7 +139,7 @@ class IMDBScraper:
             imdb_id = 'tt' + imdb_id
             season_base_url = self.base + '/title/' + imdb_id + '/episodes/?season='
             for idx, season in enumerate(seasons, start=1):
-                name = 'Temporada {0}'.format(str(idx))
+                name = '{0} temporada'.format(str(idx))
                 url_season = season_base_url + str(idx)
                 itens.append((str(season['number']), name, url_season))
         except:
@@ -166,8 +166,8 @@ class IMDBScraper:
                     except:
                         img = ''
                     description = episode.get('plot', '')
-                    name = name.replace('&amp;', '&').replace('&apos;', "'")
-                    description = description.replace('&amp;', '&').replace('&apos;', "'")
+                    name = name.replace('&', '&').replace('&apos;', "'")
+                    description = description.replace('&', '&').replace('&apos;', "'")
                     itens.append((episode_number,name,img,fanart,description))
         except:
             pass
@@ -200,7 +200,7 @@ class IMDBScraper:
                     img = ''
                 # if year:
                 #     name = name + ' (' + str(year) + ')'
-                name = name.replace('&amp;', '&').replace('&apos;', "'")
+                name = name.replace('&', '&').replace('&apos;', "'")
                 itens.append((name,img,page,year,imdb_id))
         except:
             pass       
@@ -230,8 +230,8 @@ class IMDBScraper:
                     #genre = data['genre']
                     imdb_id = re.findall(r'/tt(.*?)/', url)[0]
                     imdb_id = 'tt' + imdb_id
-                    name = name.replace('&amp;', '&').replace('&apos;', "'")
-                    description = description.replace('&amp;', '&').replace('&apos;', "'") 
+                    name = name.replace('&', '&').replace('&apos;', "'")
+                    description = description.replace('&', '&').replace('&apos;', "'") 
                     itens.append((name,image,url,description,imdb_id))
         except:
             pass
@@ -261,8 +261,8 @@ class IMDBScraper:
                     #genre = data['genre']
                     imdb_id = re.findall(r'/tt(.*?)/', url)[0]
                     imdb_id = 'tt' + imdb_id
-                    name = name.replace('&amp;', '&').replace('&apos;', "'")
-                    description = description.replace('&amp;', '&').replace('&apos;', "'")
+                    name = name.replace('&', '&').replace('&apos;', "'")
+                    description = description.replace('&', '&').replace('&apos;', "'")
                     itens.append((name,image,url,description,imdb_id)) 
         except:
             pass       

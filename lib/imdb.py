@@ -139,7 +139,7 @@ class IMDBScraper:
             imdb_id = 'tt' + imdb_id
             season_base_url = self.base + '/title/' + imdb_id + '/episodes/?season='
             for idx, season in enumerate(seasons, start=1):
-                name = 'Temporada {0}'.format(str(idx))
+                name = '{0} temporada'.format(str(idx))
                 url_season = season_base_url + str(idx)
                 itens.append((str(season['number']), name, url_season))
         except:

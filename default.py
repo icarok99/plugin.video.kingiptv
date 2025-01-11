@@ -344,6 +344,7 @@ def play_resolve_movies(param):
 
 @route('/play_resolve_series')
 def play_resolve_series(param):
+    notify('Aguarde')
     # json_rpc_command = '''
     # {
     #     "jsonrpc": "2.0",
@@ -402,6 +403,5 @@ def play_resolve_series(param):
             xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, play_item)
     else:
         notify('Stream Indisponivel')  
-
 
 

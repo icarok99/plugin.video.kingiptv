@@ -200,7 +200,7 @@ def movies_250():
             name,image,url,description, imdb_id = i
             addMenuItem({'name': name, 'description': description, 'iconimage': image, 'url': '', 'imdbnumber': imdb_id}, destiny='/play_resolve_movies', folder=False)
         end()
-        setview('Wall') 
+        setview('List') 
 
 
 
@@ -213,7 +213,7 @@ def series_250():
             name,image,url,description, imdb_id = i
             addMenuItem({'name': name, 'description': description, 'iconimage': image, 'url': url, 'imdbnumber': imdb_id}, destiny='/open_imdb_seasons')
         end()
-        setview('Wall')
+        setview('List')
 
 @route('/imdb_movies_popular')
 def movies_popular():
@@ -224,7 +224,7 @@ def movies_popular():
             name,image,url,description, imdb_id = i
             addMenuItem({'name': name, 'description': description, 'iconimage': image, 'url': '', 'imdbnumber': imdb_id}, destiny='/play_resolve_movies', folder=False)
         end()
-        setview('Wall')  
+        setview('List')  
 
 @route('/imdb_series_popular')
 def series_popular():
@@ -235,7 +235,7 @@ def series_popular():
             name,image,url,description, imdb_id = i
             addMenuItem({'name': name, 'description': description, 'iconimage': image, 'url': url, 'imdbnumber': imdb_id}, destiny='/open_imdb_seasons')
         end()
-        setview('Wall') 
+        setview('List') 
 
 @route('/open_imdb_seasons')
 def open_imdb_seasons(param):

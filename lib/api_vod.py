@@ -14,7 +14,7 @@ except:
 class VOD:
     def __init__(self):
         # URL padrão (fallback)
-        self.base = 'https://superflixapi.cx/'
+        self.base = 'https://superflixapi.cx'
         
         # Tenta buscar a URL da API remotamente via Pastebin
         self._update_base_from_pastebin()

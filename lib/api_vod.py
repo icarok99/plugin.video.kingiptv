@@ -11,7 +11,7 @@ import re
 
 class VOD:
     def __init__(self):
-        self.base = 'https://superflixapi.link'
+        self.base = '\x68\x74\x74\x70\x73\x3a\x2f\x2f\x73\x75\x70\x65\x72\x66\x6c\x69\x78\x61\x70\x69\x2e\x64\x65\x76'
 
     def tvshows(self,imdb,season,episode):
         stream = ''
@@ -48,7 +48,7 @@ class VOD:
                 cookies_dict = r.cookies.get_dict()
                 r = cfscraper.post(player,headers={'Origin': origin, 'x-requested-with': 'XMLHttpRequest'}, data={'hash': str(video_hash), 'r': r_}, cookies=cookies_dict)
                 src = r.json()
-                stream = src['videoSource'] + '|User-Agent=' + quote_plus(USER_AGENT) + '&Cookie=' + quote_plus('fireplayer_player=biinhfqat31jg8ripa3uvurum4')
+                stream = src['videoSource'] + '|User-Agent=' + quote_plus(USER_AGENT)
         except:
             pass       
         return stream
@@ -77,14 +77,10 @@ class VOD:
                 cookies_dict = r.cookies.get_dict()
                 r = cfscraper.post(player,headers={'Origin': origin, 'x-requested-with': 'XMLHttpRequest'}, data={'hash': str(video_hash), 'r': r_}, cookies=cookies_dict)
                 src = r.json()
-                stream = src['videoSource'] + '|User-Agent=' + quote_plus(USER_AGENT) + '&Cookie=' + quote_plus('fireplayer_player=biinhfqat31jg8ripa3uvurum4')
+                stream = src['videoSource'] + '|User-Agent=' + quote_plus(USER_AGENT)
         except:
             pass
         return stream
-
-#print(VOD().movie('tt0106697'))
-# print(VOD().tvshows('tt3107288','1','1'))
     
-
 
 

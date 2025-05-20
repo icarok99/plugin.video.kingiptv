@@ -46,9 +46,10 @@ class VOD:
                 player = '{uri.scheme}://{uri.netloc}/player/index.php?data={0}&do=getVideo'.format(video_hash, uri=parsed_url)
                 r = cfscraper.get(video_url, headers={'Referer': self.base + '/'})
                 cookies_dict = r.cookies.get_dict()
+                cookie_string = urlencode(cookies_dict)
                 r = cfscraper.post(player,headers={'Origin': origin, 'x-requested-with': 'XMLHttpRequest'}, data={'hash': str(video_hash), 'r': r_}, cookies=cookies_dict)
                 src = r.json()
-                stream = src['videoSource'] + '|User-Agent=' + quote_plus(USER_AGENT)
+                stream = src['videoSource'] + '|User-Agent=' + quote_plus(USER_AGENT) + '&Cookie=' + quote_plus(cookie_string)
         except:
             pass       
         return stream
@@ -75,9 +76,10 @@ class VOD:
                 player = '{uri.scheme}://{uri.netloc}/player/index.php?data={0}&do=getVideo'.format(video_hash, uri=parsed_url)
                 r = cfscraper.get(video_url, headers={'Referer': self.base + '/'})
                 cookies_dict = r.cookies.get_dict()
+                cookie_string = urlencode(cookies_dict)
                 r = cfscraper.post(player,headers={'Origin': origin, 'x-requested-with': 'XMLHttpRequest'}, data={'hash': str(video_hash), 'r': r_}, cookies=cookies_dict)
                 src = r.json()
-                stream = src['videoSource'] + '|User-Agent=' + quote_plus(USER_AGENT)
+                stream = src['videoSource'] + '|User-Agent=' + quote_plus(USER_AGENT) + '&Cookie=' + quote_plus(cookie_string)
         except:
             pass
         return stream

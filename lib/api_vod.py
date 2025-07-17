@@ -11,7 +11,7 @@ import re
 
 class VOD:
     def __init__(self):
-        self.base = '/x68/x74/x74/x70/x73/x3a/x2f/x2f/x73/x75/x70/x65/x72/x66/x6c/x69/x78/x61/x70/x69/x2e/x6d/x79'
+        self.base = '\x68\x74\x74\x70\x73\x3a\x2f\x2f\x73\x75\x70\x65\x72\x66\x6c\x69\x78\x61\x70\x69\x2e\x6d\x79'
 
     def tvshows(self,imdb,season,episode):
         stream = ''

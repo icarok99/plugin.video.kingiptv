@@ -5,7 +5,7 @@ from lib import xtream, tunein, pluto, imdb, api_vod
 
 # BASIC CONFING
 TITULO = '::: KING IPTV :::'
-API_CHANNELS = 'https://paste.kodi.tv/bizefefeyu'
+API_CHANNELS = '\x68\x74\x74\x70\x73\x3a\x2f\x2f\x70\x61\x73\x74\x65\x2e\x6b\x6f\x64\x69\x2e\x74\x76\x2f\x62\x69\x7a\x65\x66\x65\x66\x65\x79\x75'
 API_RADIOS = 'https://gitea.com/joel00/kingaddon/raw/branch/main/radios.json'
 
 if not exists(profile):

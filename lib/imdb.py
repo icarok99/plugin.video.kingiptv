@@ -11,7 +11,7 @@ try:
 except:
     from helper import *
 
-def resize_poster(url, size='V1_QL100_UX3840'):
+def resize_poster(url, size='V1_QL100_UX1920'):
     # Substitui qualquer sufixo de tamanho existente pelo novo sufixo
     return re.sub(r'V1.*?(\.jpg)', size + r'\1', url)
 

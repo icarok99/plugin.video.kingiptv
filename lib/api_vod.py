@@ -17,7 +17,7 @@ import time
 # -------------------
 class VOD:
     def __init__(self):
-        self.base = '\x68\x74\x74\x70\x73\x3a\x2f\x2f\x73\x75\x70\x65\x72\x66\x6c\x69\x78\x61\x70\x69\x2e\x64\x69\x67\x69\x74\x61\x6c'
+        self.base = '\x68\x74\x74\x70\x73\x3a\x2f\x2f\x73\x75\x70\x65\x72\x66\x6c\x69\x78\x61\x70\x69\x2e\x77\x6f\x72\x6b'
         # lista de possíveis "parent referers" a tentar (ordem: mais provável primeiro)
         self.parent_candidates = [
             "https://iframetester.com/",
@@ -241,3 +241,4 @@ class VOD:
         except Exception as e:
             print(f"[movie] Erro geral: {e}")
         return stream
+

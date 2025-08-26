@@ -6,21 +6,20 @@ import xbmcvfs
 import urllib.request
 import json
 
+# ID e caminho do addon
 ADDON_ID = 'plugin.video.kingiptv'
 ADDON_PATH = xbmcvfs.translatePath(f'special://home/addons/{ADDON_ID}/')
 
+# URLs do repositório
 RAW_BASE_URL = 'https://raw.githubusercontent.com/icarok99/plugin.video.kingiptv/main/'
 CONTENTS_API_URL = 'https://api.github.com/repos/icarok99/plugin.video.kingiptv/contents/'
-
-def notify(msg):
-    xbmcgui.Dialog().notification('KING IPTV - Update', msg, xbmcgui.NOTIFICATION_INFO, 4000)
 
 def make_github_request(url):
     try:
         with urllib.request.urlopen(url) as response:
             return json.loads(response.read().decode('utf-8'))
     except Exception as e:
-        notify(f'Erro na requisição: {e}')
+        # Notificação movida para default_king.py
         return None
 
 def fetch_all_files(api_url, base_path=""):
@@ -47,24 +46,20 @@ def download_and_replace_file(path):
             f.write(content)
         return True
     except Exception as e:
-        notify(f'Erro ao atualizar {path}: {e}')
+        # Notificação movida para default_king.py
         return False
 
 def update_files():
     files = fetch_all_files(CONTENTS_API_URL)
     if not files:
-        notify('Nenhum arquivo encontrado no repositório.')
-        return
+        return False
 
     updated = False
     for file in files:
         success = download_and_replace_file(file)
         updated = updated or success
 
-    if updated:
-        notify('Addon atualizado com sucesso.')
-    else:
-        notify('Nenhum arquivo foi atualizado.')
+    return updated
 
 if __name__ == '__main__':
     update_files()

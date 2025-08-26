@@ -41,11 +41,6 @@ try:
             print(f'Erro ao verificar data remota: {e}')
         return False
 
-    if is_update_needed_by_date():
-        github_update.update_files()
-        from xbmcgui import Dialog
-        Dialog().notification('Atualizando addon', 'Atualização concluída com sucesso!', xbmcgui.NOTIFICATION_INFO, 5000)
-
 except Exception as e:
     from xbmcgui import Dialog
     Dialog().notification('Erro na atualização automática', str(e), xbmcgui.NOTIFICATION_ERROR, 5000)
@@ -66,6 +61,18 @@ IPTV_PROBLEM_LOG = translate(os.path.join(profile, 'iptv_problems_log.txt'))
 
 @route('/')
 def index():
+    # === VERIFICAÇÃO DE UPDATE AUTOMÁTICA ===
+    try:
+        if is_update_needed_by_date():
+            from xbmcgui import Dialog
+            Dialog().notification('KING IPTV', 'Atualizando...', xbmcgui.NOTIFICATION_INFO, 5000)
+            github_update.update_files()
+            Dialog().notification('KING IPTV', 'Atualizado com sucesso!', xbmcgui.NOTIFICATION_INFO, 5000)
+    except Exception as e:
+        from xbmcgui import Dialog
+        Dialog().notification('KING IPTV', f'Erro na atualização: {e}', xbmcgui.NOTIFICATION_ERROR, 5000)
+    # === FIM DA VERIFICAÇÃO ===
+
     addMenuItem({'name': TITULO, 'description': ''}, destiny='')
     addMenuItem({'name': 'LISTAS IPTV', 'description': ''}, destiny='/playlistiptv')
     if six.PY3:
@@ -493,6 +500,5 @@ def play_resolve_series(param):
             xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, play_item)
     else:
         notify('Stream Indisponivel')  
-
 
 

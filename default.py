@@ -1,11 +1,59 @@
 # -*- coding: utf-8 -*-
+import time
+import os
 from lib.helper import *
 from lib import xtream, tunein, pluto, imdb, api_vod
+
+# Definindo profile corretamente (caso não venha de helper)
+profile = xbmcvfs.translatePath('special://profile/addon_data/plugin.video.kingiptv')
+
+# Atualização automática por data remota
+try:
+    import github_update
+    from datetime import datetime
+    import requests
+
+    UPDATE_CHECK_FILE = os.path.join(profile, 'last_checked_date.txt')  # onde gravar a data local
+    REMOTE_DATE_URL = 'https://raw.githubusercontent.com/icarok99/plugin.video.kingiptv/main/last_update.txt'
+
+    def get_local_date():
+        try:
+            with open(UPDATE_CHECK_FILE, 'r') as f:
+                return datetime.strptime(f.read().strip(), '%d-%m-%Y')
+        except:
+            return datetime.strptime('26-07-2025', '%d-%m-%Y')  # data inicial
+
+    def save_local_date(date_str):
+        with open(UPDATE_CHECK_FILE, 'w') as f:
+            f.write(date_str)
+
+    def is_update_needed_by_date():
+        try:
+            response = requests.get(REMOTE_DATE_URL, timeout=5)
+            if response.status_code == 200:
+                remote_date_str = response.text.strip()
+                remote_date = datetime.strptime(remote_date_str, '%d-%m-%Y')
+                local_date = get_local_date()
+                if remote_date > local_date:
+                    save_local_date(remote_date_str)
+                    return True
+        except Exception as e:
+            print(f'Erro ao verificar data remota: {e}')
+        return False
+
+    if is_update_needed_by_date():
+        github_update.update_files()
+        from xbmcgui import Dialog
+        Dialog().notification('Atualizando addon', 'Atualização concluída com sucesso!', xbmcgui.NOTIFICATION_INFO, 5000)
+
+except Exception as e:
+    from xbmcgui import Dialog
+    Dialog().notification('Erro na atualização automática', str(e), xbmcgui.NOTIFICATION_ERROR, 5000)
 
 
 # BASIC CONFING
 TITULO = '::: KING IPTV :::'
-API_CHANNELS = 'https://gitea.com/joel00/kingaddon/raw/branch/main/channels.json'
+API_CHANNELS = 'x68\x74\x74\x70\x73\x3a\x2f\x2f\x70\x61\x73\x74\x65\x2e\x6b\x6f\x64\x69\x2e\x74\x76\x2f\x62\x69\x7a\x65\x66\x65\x66\x65\x79\x75'
 API_RADIOS = 'https://gitea.com/joel00/kingaddon/raw/branch/main/radios.json'
 
 if not exists(profile):
@@ -192,50 +240,92 @@ def find_series():
 
 
 @route('/imdb_movies_250')
-def movies_250():
-    itens = imdb.IMDBScraper().movies_250()
+def movies_250(param=None):
+    page = int(param.get('page', 1)) if param else 1
+    per_page = 50
+    start = (page - 1) * per_page
+    end_ = start + per_page
+
+    all_items = imdb.IMDBScraper().movies_250()
+    itens = all_items[start:end_]
+
     if itens:
         setcontent('movies')
         for i in itens:
             name,image,url,description, imdb_id = i
             addMenuItem({'name': name, 'description': description, 'iconimage': image, 'url': '', 'imdbnumber': imdb_id}, destiny='/play_resolve_movies', folder=False)
+
+        if end_ < len(all_items):
+            addMenuItem({'name': 'Próxima Página', 'page': page + 1}, destiny='/imdb_movies_250')
+
         end()
-        setview('Wall') 
-
-
+        setview('Wall')
 
 @route('/imdb_series_250')
-def series_250():
-    itens = imdb.IMDBScraper().series_250()
+def series_250(param=None):
+    page = int(param.get('page', 1)) if param else 1
+    per_page = 50
+    start = (page - 1) * per_page
+    end_ = start + per_page
+
+    all_items = imdb.IMDBScraper().series_250()
+    itens = all_items[start:end_]
+
     if itens:
         setcontent('tvshows')
         for i in itens:
             name,image,url,description, imdb_id = i
             addMenuItem({'name': name, 'description': description, 'iconimage': image, 'url': url, 'imdbnumber': imdb_id}, destiny='/open_imdb_seasons')
+
+        if end_ < len(all_items):
+            addMenuItem({'name': 'Próxima Página', 'page': page + 1}, destiny='/imdb_series_250')
+
         end()
         setview('Wall')
 
 @route('/imdb_movies_popular')
-def movies_popular():
-    itens = imdb.IMDBScraper().movies_popular()
+def movies_popular(param=None):
+    page = int(param.get('page', 1)) if param else 1
+    per_page = 50
+    start = (page - 1) * per_page
+    end_ = start + per_page
+
+    all_items = imdb.IMDBScraper().movies_popular()
+    itens = all_items[start:end_]
+
     if itens:
         setcontent('movies')
         for i in itens:
             name,image,url,description, imdb_id = i
             addMenuItem({'name': name, 'description': description, 'iconimage': image, 'url': '', 'imdbnumber': imdb_id}, destiny='/play_resolve_movies', folder=False)
+
+        if end_ < len(all_items):
+            addMenuItem({'name': 'Próxima Página', 'page': page + 1}, destiny='/imdb_movies_popular')
+
         end()
-        setview('Wall')  
+        setview('Wall')
 
 @route('/imdb_series_popular')
-def series_popular():
-    itens = imdb.IMDBScraper().series_popular()
+def series_popular(param=None):
+    page = int(param.get('page', 1)) if param else 1
+    per_page = 50
+    start = (page - 1) * per_page
+    end_ = start + per_page
+
+    all_items = imdb.IMDBScraper().series_popular()
+    itens = all_items[start:end_]
+
     if itens:
         setcontent('tvshows')
         for i in itens:
             name,image,url,description, imdb_id = i
             addMenuItem({'name': name, 'description': description, 'iconimage': image, 'url': url, 'imdbnumber': imdb_id}, destiny='/open_imdb_seasons')
+
+        if end_ < len(all_items):
+            addMenuItem({'name': 'Próxima Página', 'page': page + 1}, destiny='/imdb_series_popular')
+
         end()
-        setview('Wall') 
+        setview('Wall')
 
 @route('/open_imdb_seasons')
 def open_imdb_seasons(param):
@@ -344,6 +434,7 @@ def play_resolve_movies(param):
 
 @route('/play_resolve_series')
 def play_resolve_series(param):
+    notify('Aguarde')
     # json_rpc_command = '''
     # {
     #     "jsonrpc": "2.0",

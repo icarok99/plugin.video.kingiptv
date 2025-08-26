@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-try:
-    from lib.ClientScraper import cfscraper, USER_AGENT
-except ImportError:
-    from ClientScraper import cfscraper, USER_AGENT
+# try:
+#     from lib.ClientScraper import cfscraper, USER_AGENT
+# except ImportError:
+#     from ClientScraper import cfscraper, USER_AGENT
 try:
     from lib.helper import *
 except:
@@ -124,3 +124,4 @@ class VOD:
 
 print(VOD().movie('tt0106697'))
 print(VOD().tvshows('tt3107288', '1', '1'))
+

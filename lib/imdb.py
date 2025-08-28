@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+import re
+import json
+from bs4 import BeautifulSoup
 try:
     from lib.ClientScraper import cfscraper
 except ImportError:
@@ -7,413 +10,210 @@ try:
     from lib.helper import *
 except:
     from helper import *
-import re
 
-# IMDB ATUALIZADO
-
-# def buscar_chaves(dicionario, chave_alvo, caminho_atual=""):
-#     if isinstance(dicionario, dict):
-#         for chave, valor in dicionario.items():
-#             novo_caminho = f"{caminho_atual}['{chave}']" if caminho_atual else f"['{chave}']"
-#             if chave == chave_alvo:
-#                 print(f"Chave encontrada: {novo_caminho} -> {valor}")
-#             buscar_chaves(valor, chave_alvo, novo_caminho)
-#     elif isinstance(dicionario, list):
-#         for index, item in enumerate(dicionario):
-#             novo_caminho = f"{caminho_atual}[{index}]"
-#             buscar_chaves(item, chave_alvo, novo_caminho)
+def resize_poster(url, size='V1_QL100_UX3840'):
+    # Substitui qualquer sufixo de tamanho existente pelo novo sufixo
+    return re.sub(r'V1.*?(\.jpg)', size + r'\1', url)
 
 class IMDBScraper:
     def __init__(self):
         self.base = 'https://www.imdb.com'
         self.headers = {
-        'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8'
+            'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8'
         }
-    def soup(self,html):
-        soup = BeautifulSoup(html, 'html.parser')
-        return soup
 
-    def search_series(self,search):
+    def soup(self, html):
+        return BeautifulSoup(html, 'html.parser')
+
+    def search_series(self, search):
         itens = []
         try:
             query = quote(search)
-            url = '{0}/find/?q={1}&s=tt&ttype=tv'.format(self.base,query)
-            html = cfscraper.get(url,headers=self.headers).text
-            json_ = re.findall(r'<script id="__NEXT_DATA__" type="application/json">(.+?)</script>', html,re.DOTALL)[0]
+            url = f'{self.base}/find/?q={query}&s=tt&ttype=tv'
+            html = cfscraper.get(url, headers=self.headers).text
+            json_ = re.findall(r'<script id="__NEXT_DATA__" type="application/json">(.+?)</script>', html, re.DOTALL)[0]
             data = json.loads(json_)
             results = data['props']['pageProps']['titleResults']['results']
             for idx, serie in enumerate(results):
                 imdb_id = serie['id']
-                page = self.base + '/title/' + imdb_id  +'/?ref_=fn_tt_tt_' + str(idx)
+                page = f'{self.base}/title/{imdb_id}/?ref_=fn_tt_tt_{idx}'
                 name = serie['titleNameText']
-                try:
-                    year = serie['titleReleaseText']
-                    try:
-                        year = year.split('–')[0]
-                    except:
-                        pass
-                    enable_year = True
-                except:
-                    enable_year = False
-                    year = '0'
-                try:
-                    img = serie['titlePosterImageModel']['url']
-                except:
-                    img = ''
-                if enable_year:
-                    name = name + ' (' + str(year) + ')'
-                name = name.replace('&amp;', '&').replace('&apos;', "'")
-                itens.append((name,img,page,year,imdb_id))
+                year = serie.get('titleReleaseText', '0').split('-')[0]
+                img_original = serie.get('titlePosterImageModel', {}).get('url', '')
+                img = resize_poster(img_original)
+                if not img:
+                    continue
+                name = name.replace('&', '&').replace('&apos;', "'")
+                itens.append((name, img, page, year, imdb_id))
         except:
-            pass       
+            pass
         return itens
 
-
-    # def series_250(self):
-    #     itens = []
-    #     try:
-    #         url = self.base + '/chart/toptv/?ref_=nv_tvv_250'
-    #         html = cfscraper.get(url,headers=self.headers).text
-    #         json_ = re.findall(r'<script type="application/ld\+json">(.+?)</script>', html,re.DOTALL)[0]
-    #         dict_ = json.loads(json_)
-    #         series = dict_['itemListElement']
-    #         if series:
-    #             for i in series:
-    #                 data = i['item']
-    #                 name = data['name']
-    #                 tip = data['@type']
-    #                 url = data['url']
-    #                 try:
-    #                     description = data['description']
-    #                 except:
-    #                     description = ''
-    #                 image = data['image']
-    #                 #rate = data['aggregateRating']['ratingValue']
-    #                 #genre = data['genre']
-    #                 imdb_id = re.findall(r'/tt(.*?)/', url)[0]
-    #                 imdb_id = 'tt' + imdb_id
-    #                 name = name.replace('&amp;', '&').replace('&apos;', "'")
-    #                 description = description.replace('&amp;', '&').replace('&apos;', "'")                    
-    #                 itens.append((name,image,url,description,imdb_id))
-    #     except:
-    #         pass
-    #     return itens
-    
-    # series
-    def series_250(self):
+    def series_250(self, page=1, per_page=250):
         itens = []
         try:
             url = self.base + '/chart/toptv/?ref_=nv_tvv_250'
-            html = cfscraper.get(url,headers=self.headers).text
-            soup = self.soup(html)
-            ul_element = soup.select('ul[class^="ipc-metadata-list"]')[0]
-            li_elements = ul_element.select('li[class^="ipc-metadata-list-summary-item"]')
-            if li_elements:
-                for li in li_elements:
-                    image = str(li.find_all('img')[0].get('src', '')).replace('140_', '800_').replace(',1,', ',').replace(',0,', ',').replace('140,207_', '500,800_').replace('207_', '800_')
-                    a = li.select('a[class^="ipc-title-link-wrapper"]')[0]
-                    url = self.base + a.get('href', '')
-                    try:
-                        name = str(a.text).split('. ')[1]
-                    except:
-                        name = a.text
-                    try:
-                        name = name.decode('utf-8')
-                    except:
-                        pass
-                    year = str(li.select('div[class$="cli-title-metadata"]')[0].select('span[class$="cli-title-metadata-item"]')[0].text).split('–')[0]
-                    try:
-                        year = year.decode('utf-8')
-                    except:
-                        pass
-                    imdb_id = re.findall(r'/tt(.*?)/', url)[0]
-                    imdb_id = 'tt' + imdb_id
-                    name = name.replace('&amp;', '&').replace('&apos;', "'") 
-                    description = ''
-                    name = name + ' (' + year + ')'
-                    itens.append((name,image,url,description,imdb_id))
+            html = cfscraper.get(url, headers=self.headers).text
+            json_ = re.findall(r'<script type="application/ld\+json">(.+?)</script>', html, re.DOTALL)[0]
+            dict_ = json.loads(json_)
+            all_items = []
+            for i in dict_['itemListElement']:
+                data = i['item']
+                name = data.get('alternateName', data.get('name', ''))
+                url = data['url']
+                description = data.get('description', '')
+                image = resize_poster(data.get('image', ''))
+                if not image:
+                    continue
+                imdb_id = 'tt' + re.findall(r'/tt(.*?)/', url)[0]
+                name = name.replace('&', '&').replace('&apos;', "'")
+                description = description.replace('&', '&').replace('&apos;', "'")
+                all_items.append((name, image, url, description, imdb_id))
+            start = (page - 1) * per_page
+            end = start + per_page
+            itens = all_items[start:end]
         except:
-            pass             
-        return itens    
-    
-    # def series_popular(self):
-    #     itens = []
-    #     try:
-    #         url = self.base + '/chart/tvmeter/?ref_=nv_tvv_mptv'
-    #         html = cfscraper.get(url,headers=self.headers).text
-    #         json_ = re.findall(r'<script type="application/ld\+json">(.+?)</script>', html,re.DOTALL)[0]
-    #         dict_ = json.loads(json_)
-    #         series = dict_['itemListElement']
-    #         if series:
-    #             for i in series:
-    #                 data = i['item']
-    #                 name = data['name']
-    #                 tip = data['@type']
-    #                 url = data['url']
-    #                 try:
-    #                     description = data['description']
-    #                 except:
-    #                     description = ''
-    #                 image = data['image']
-    #                 #rate = data['aggregateRating']['ratingValue']
-    #                 #genre = data['genre']
-    #                 imdb_id = re.findall(r'/tt(.*?)/', url)[0]
-    #                 imdb_id = 'tt' + imdb_id
-    #                 name = name.replace('&amp;', '&').replace('&apos;', "'")
-    #                 description = description.replace('&amp;', '&').replace('&apos;', "'")
-    #                 itens.append((name,image,url,description,imdb_id))
-    #     except:
-    #         pass 
-    #     return itens 
-    # 
-    def series_popular(self):
-        itens = [] 
-        try:
-            url = self.base + '/chart/tvmeter/?ref_=nv_tvv_mptv'
-            html = cfscraper.get(url,headers=self.headers).text
-            soup = self.soup(html)
-            ul_element = soup.select('ul[class^="ipc-metadata-list"]')[0]
-            li_elements = ul_element.select('li[class^="ipc-metadata-list-summary-item"]')
-            if li_elements:
-                for li in li_elements:
-                    image = str(li.find_all('img')[0].get('src', '')).replace('140_', '800_').replace(',1,', ',').replace(',0,', ',').replace('140,207_', '500,800_').replace('207_', '800_')
-                    a = li.select('a[class^="ipc-title-link-wrapper"]')[0]
-                    url = self.base + a.get('href', '')
-                    try:
-                        name = str(a.text).split('. ')[1]
-                    except:
-                        name = a.text
-                    try:
-                        name = name.decode('utf-8')
-                    except:
-                        pass
-                    year = str(li.select('div[class$="cli-title-metadata"]')[0].select('span[class$="cli-title-metadata-item"]')[0].text).split('–')[0]
-                    try:
-                        year = year.decode('utf-8')
-                    except:
-                        pass
-                    imdb_id = re.findall(r'/tt(.*?)/', url)[0]
-                    imdb_id = 'tt' + imdb_id
-                    name = name.replace('&amp;', '&').replace('&apos;', "'") 
-                    description = ''
-                    name = name + ' (' + year + ')'
-                    itens.append((name,image,url,description,imdb_id))
-        except:
-            pass             
-        return itens              
+            pass
+        return itens
 
-
-
-    
-    def imdb_seasons(self,url):
+    def series_popular(self, page=1, per_page=100):
         itens = []
         try:
-            html = cfscraper.get(url,headers=self.headers).text
-            json_ = re.findall(r'<script id="__NEXT_DATA__" type="application/json">(.+?)</script>', html,re.DOTALL)[0]
+            url = self.base + '/chart/tvmeter/?ref_=nv_tvv_mptv'
+            html = cfscraper.get(url, headers=self.headers).text
+            json_ = re.findall(r'<script type="application/ld\+json">(.+?)</script>', html, re.DOTALL)[0]
+            dict_ = json.loads(json_)
+            all_items = []
+            for i in dict_['itemListElement']:
+                data = i['item']
+                name = data.get('alternateName', data.get('name', ''))
+                url = data['url']
+                description = data.get('description', '')
+                image = resize_poster(data.get('image', ''))
+                if not image:
+                    continue
+                imdb_id = 'tt' + re.findall(r'/tt(.*?)/', url)[0]
+                name = name.replace('&', '&').replace('&apos;', "'")
+                description = description.replace('&', '&').replace('&apos;', "'")
+                all_items.append((name, image, url, description, imdb_id))
+            start = (page - 1) * per_page
+            end = start + per_page
+            itens = all_items[start:end]
+        except:
+            pass
+        return itens
+
+    def imdb_seasons(self, url):
+        itens = []
+        try:
+            html = cfscraper.get(url, headers=self.headers).text
+            json_ = re.findall(r'<script id="__NEXT_DATA__" type="application/json">(.+?)</script>', html, re.DOTALL)[0]
             data = json.loads(json_)
             seasons = data['props']['pageProps']['mainColumnData']['episodes']['seasons']
-            imdb_id = re.findall(r'/tt(.*?)/', url)[0]
-            imdb_id = 'tt' + imdb_id
+            imdb_id = 'tt' + re.findall(r'/tt(.*?)/', url)[0]
             season_base_url = self.base + '/title/' + imdb_id + '/episodes/?season='
-            for idx, season in enumerate(seasons, start=1):
-                name = 'Temporada {0}'.format(str(idx))
-                url_season = season_base_url + str(idx)
+            for season in seasons:
+                name = f"{season['number']} temporada"
+                url_season = season_base_url + str(season['number'])
                 itens.append((str(season['number']), name, url_season))
         except:
             pass
         return itens
 
-    def imdb_episodes(self,url):
+    def imdb_episodes(self, url):
         itens = []
         try:
-            html = cfscraper.get(url,headers=self.headers).text
-            json_ = re.findall(r'<script id="__NEXT_DATA__" type="application/json">(.+?)</script>', html,re.DOTALL)[0]
+            html = cfscraper.get(url, headers=self.headers).text
+            json_ = re.findall(r'<script id="__NEXT_DATA__" type="application/json">(.+?)</script>', html, re.DOTALL)[0]
             data = json.loads(json_)
             episodes = data['props']['pageProps']['contentData']['section']['episodes']['items']
-            try:
-                fanart = data['props']['pageProps']['contentData']['entityMetadata']['primaryImage']['url']
-            except:
-                fanart = ''
-            if episodes:
-                for idx, episode in enumerate(episodes, start=1):
-                    episode_number = str(idx)
-                    name = episode.get('titleText', 'Episodio - ' + episode_number)
-                    try:
-                        img = episode['image']['url']
-                    except:
-                        img = ''
-                    description = episode.get('plot', '')
-                    name = name.replace('&amp;', '&').replace('&apos;', "'")
-                    description = description.replace('&amp;', '&').replace('&apos;', "'")
-                    itens.append((episode_number,name,img,fanart,description))
+            fanart = data['props']['pageProps']['contentData']['entityMetadata'].get('primaryImage', {}).get('url', '')
+            fanart = resize_poster(fanart)
+            for idx, episode in enumerate(episodes, start=1):
+                name = episode.get('titleText', f'Episodio - {idx}')
+                img = resize_poster(episode.get('image', {}).get('url', ''))
+                description = episode.get('plot', '')
+                name = name.replace('&', '&').replace('&apos;', "'")
+                description = description.replace('&', '&').replace('&apos;', "'")
+                itens.append((str(idx), name, img, fanart, description))
         except:
             pass
         return itens
-    
-    def search_movies(self,search):
+
+    def search_movies(self, search):
         itens = []
         try:
             query = quote(search)
-            url = '{0}/find/?q={1}&s=tt&ttype=ft'.format(self.base,query)
-            html = cfscraper.get(url,headers=self.headers).text
-            json_ = re.findall(r'<script id="__NEXT_DATA__" type="application/json">(.+?)</script>', html,re.DOTALL)[0]
+            url = f'{self.base}/find/?q={query}&s=tt&ttype=ft'
+            html = cfscraper.get(url, headers=self.headers).text
+            json_ = re.findall(r'<script id="__NEXT_DATA__" type="application/json">(.+?)</script>', html, re.DOTALL)[0]
             data = json.loads(json_)
             results = data['props']['pageProps']['titleResults']['results']
             for idx, movie in enumerate(results):
                 imdb_id = movie['id']
-                page = self.base + '/title/' + imdb_id  +'/?ref_=fn_tt_tt_' + str(idx)
+                page = f'{self.base}/title/{imdb_id}/?ref_=fn_tt_tt_{idx}'
                 name = movie['titleNameText']
-                try:
-                    year = movie['titleReleaseText']
-                    try:
-                        year = year.split('–')[0]
-                    except:
-                        pass
-                    enable_year = True
-                except:
-                    enable_year = False
-                    year = '0'
-                try:
-                    img = movie['titlePosterImageModel']['url']
-                except:
-                    img = ''
-                if enable_year:
-                    name = name + ' (' + str(year) + ')'
-                name = name.replace('&amp;', '&').replace('&apos;', "'")
-                itens.append((name,img,page,year,imdb_id))
+                year = movie.get('titleReleaseText', '0').split('-')[0]
+                img_original = movie.get('titlePosterImageModel', {}).get('url', '')
+                img = resize_poster(img_original)
+                if not img:
+                    continue
+                name = name.replace('&', '&').replace('&apos;', "'")
+                itens.append((name, img, page, year, imdb_id))
         except:
-            pass       
-        return itens    
+            pass
+        return itens
 
-    # def movies_250(self):
-    #     itens = []
-    #     try:
-    #         url = self.base + '/chart/top/?ref_=nv_mv_250'
-    #         html = cfscraper.get(url,headers=self.headers).text
-    #         json_ = re.findall(r'<script type="application/ld\+json">(.+?)</script>', html,re.DOTALL)[0]
-    #         dict_ = json.loads(json_)
-    #         movies = dict_['itemListElement']
-    #         if movies:
-    #             for i in movies:
-    #                 data = i['item']
-    #                 #name = data['name']
-    #                 name = data.get('alternateName', data.get('name', ''))
-    #                 tip = data['@type']
-    #                 url = data['url']
-    #                 try:
-    #                     description = data['description']
-    #                 except:
-    #                     description = ''
-    #                 image = data['image']
-    #                 #rate = data['aggregateRating']['ratingValue']
-    #                 #genre = data['genre']
-    #                 imdb_id = re.findall(r'/tt(.*?)/', url)[0]
-    #                 imdb_id = 'tt' + imdb_id
-    #                 name = name.replace('&amp;', '&').replace('&apos;', "'")
-    #                 description = description.replace('&amp;', '&').replace('&apos;', "'")
-    #                 itens.append((name,image,url,description,imdb_id))
-    #     except:
-    #         pass
-    #     return itens
-    def movies_250(self):
-        itens = [] 
+    def movies_250(self, page=1, per_page=250):
+        itens = []
         try:
             url = self.base + '/chart/top/?ref_=nv_mv_250'
-            html = cfscraper.get(url,headers=self.headers).text
-            soup = self.soup(html)
-            ul_element = soup.select('ul[class^="ipc-metadata-list"]')[0]
-            li_elements = ul_element.select('li[class^="ipc-metadata-list-summary-item"]')
-            if li_elements:
-                for li in li_elements:
-                    image = str(li.find_all('img')[0].get('src', '')).replace('140_', '800_').replace(',1,', ',').replace(',0,', ',').replace('140,207_', '500,800_').replace('207_', '800_')
-                    a = li.select('a[class^="ipc-title-link-wrapper"]')[0]
-                    url = self.base + a.get('href', '')
-                    try:
-                        name = str(a.text).split('. ')[1]
-                    except:
-                        name = a.text
-                    try:
-                        name = name.decode('utf-8')
-                    except:
-                        pass
-                    year = str(li.select('div[class$="cli-title-metadata"]')[0].select('span[class$="cli-title-metadata-item"]')[0].text).split('–')[0]
-                    try:
-                        year = year.decode('utf-8')
-                    except:
-                        pass
-                    imdb_id = re.findall(r'/tt(.*?)/', url)[0]
-                    imdb_id = 'tt' + imdb_id
-                    name = name.replace('&amp;', '&').replace('&apos;', "'") 
-                    description = ''
-                    name = name + ' (' + year + ')'
-                    itens.append((name,image,url,description,imdb_id))            
+            html = cfscraper.get(url, headers=self.headers).text
+            json_ = re.findall(r'<script type="application/ld\+json">(.+?)</script>', html, re.DOTALL)[0]
+            dict_ = json.loads(json_)
+            all_items = []
+            for i in dict_['itemListElement']:
+                data = i['item']
+                name = data.get('alternateName', data.get('name', ''))
+                url = data['url']
+                description = data.get('description', '')
+                image = resize_poster(data.get('image', ''))
+                if not image:
+                    continue
+                imdb_id = 'tt' + re.findall(r'/tt(.*?)/', url)[0]
+                name = name.replace('&', '&').replace('&apos;', "'")
+                description = description.replace('&', '&').replace('&apos;', "'")
+                all_items.append((name, image, url, description, imdb_id))
+            start = (page - 1) * per_page
+            end = start + per_page
+            itens = all_items[start:end]
         except:
             pass
-        return itens         
+        return itens
 
-    # def movies_popular(self):
-    #     itens = []
-    #     try:
-    #         url = self.base + '/chart/moviemeter/?ref_=nv_mv_mpm'
-    #         html = cfscraper.get(url,headers=self.headers).text
-    #         json_ = re.findall(r'<script type="application/ld\+json">(.+?)</script>', html,re.DOTALL)[0]
-    #         dict_ = json.loads(json_)
-    #         movies = dict_['itemListElement']
-    #         if movies:
-    #             for i in movies:
-    #                 data = i['item']
-    #                 #name = data['name']
-    #                 name = data.get('alternateName', data.get('name', ''))
-    #                 tip = data['@type']
-    #                 url = data['url']
-    #                 try:
-    #                     description = data['description']
-    #                 except:
-    #                     description = ''
-    #                 image = data['image']
-    #                 #rate = data['aggregateRating']['ratingValue']
-    #                 #genre = data['genre']
-    #                 imdb_id = re.findall(r'/tt(.*?)/', url)[0]
-    #                 imdb_id = 'tt' + imdb_id
-    #                 name = name.replace('&amp;', '&').replace('&apos;', "'")
-    #                 description = description.replace('&amp;', '&').replace('&apos;', "'")
-    #                 itens.append((name,image,url,description,imdb_id)) 
-    #     except:
-    #         pass       
-    #     return itens 
-    def movies_popular(self):
-        itens = [] 
+    def movies_popular(self, page=1, per_page=100):
+        itens = []
         try:
             url = self.base + '/chart/moviemeter/?ref_=nv_mv_mpm'
-            html = cfscraper.get(url,headers=self.headers).text
-            soup = self.soup(html)
-            ul_element = soup.select('ul[class^="ipc-metadata-list"]')[0]
-            li_elements = ul_element.select('li[class^="ipc-metadata-list-summary-item"]')
-            if li_elements:
-                for li in li_elements:
-                    image = str(li.find_all('img')[0].get('src', '')).replace('140_', '800_').replace(',1,', ',').replace(',0,', ',').replace('140,207_', '500,800_').replace('207_', '800_')
-                    a = li.select('a[class^="ipc-title-link-wrapper"]')[0]
-                    url = self.base + a.get('href', '')
-                    try:
-                        name = str(a.text).split('. ')[1]
-                    except:
-                        name = a.text
-                    try:
-                        name = name.decode('utf-8')
-                    except:
-                        pass
-                    year = str(li.select('div[class$="cli-title-metadata"]')[0].select('span[class$="cli-title-metadata-item"]')[0].text).split('–')[0]
-                    try:
-                        year = year.decode('utf-8')
-                    except:
-                        pass
-                    imdb_id = re.findall(r'/tt(.*?)/', url)[0]
-                    imdb_id = 'tt' + imdb_id
-                    name = name.replace('&amp;', '&').replace('&apos;', "'") 
-                    description = ''
-                    name = name + ' (' + year + ')'
-                    itens.append((name,image,url,description,imdb_id))            
+            html = cfscraper.get(url, headers=self.headers).text
+            json_ = re.findall(r'<script type="application/ld\+json">(.+?)</script>', html, re.DOTALL)[0]
+            dict_ = json.loads(json_)
+            all_items = []
+            for i in dict_['itemListElement']:
+                data = i['item']
+                name = data.get('alternateName', data.get('name', ''))
+                url = data['url']
+                description = data.get('description', '')
+                image = resize_poster(data.get('image', ''))
+                if not image:
+                    continue
+                imdb_id = 'tt' + re.findall(r'/tt(.*?)/', url)[0]
+                name = name.replace('&', '&').replace('&apos;', "'")
+                description = description.replace('&', '&').replace('&apos;', "'")
+                all_items.append((name, image, url, description, imdb_id))
+            start = (page - 1) * per_page
+            end = start + per_page
+            itens = all_items[start:end]
         except:
             pass
-        return itens             
-
+        return itens

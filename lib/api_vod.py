@@ -13,7 +13,21 @@ headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:141.0) Ge
 
 class VOD:
     def __init__(self):
-        self.base = 'https://superflixapi.shop'
+        original_base = 'https://superflixapi.work'
+        self.base = self.get_last_base(original_base)
+        print(f"Initialized VOD with base URL: {self.base}")
+
+    def get_last_base(self, url):
+        last_url = url
+        try:
+            r = requests.get(url, headers=headers, timeout=4)
+            last_url = r.url
+        except Exception as e:
+            print(f"get_last_base error: {e}")
+
+        if last_url and last_url.endswith('/'):
+            last_url = last_url[:-1]
+        return last_url
 
     def tvshows(self,imdb,season,episode):
         stream = ''
@@ -93,3 +107,4 @@ class VOD:
         except:
             pass
         return stream
+

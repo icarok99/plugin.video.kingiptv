@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
-import time
 import os
+import time
 from lib.helper import *
+import inputstreamhelper
 from lib import xtream, tunein, pluto, imdb, api_vod
 
 # Definindo profile corretamente (caso não venha de helper)
@@ -154,12 +155,11 @@ def play_iptv(param):
     xbmc.executebuiltin('RunPlugin(%s)' % plugin)
 
 @route('/channels_pluto')
-def channels_pluto():
+def channels_pluto(param=None):
     channels = pluto.playlist_pluto()
     if channels:
         setcontent('movies')
-        for channel in channels:
-            channel_name,desc,thumbnail,stream = channel
+        for channel_name, desc, thumbnail, stream in channels:
             addMenuItem({'name': channel_name, 'description': desc, 'iconimage': thumbnail, 'url': stream}, destiny='/play_iptv2', folder=False)
         end()
         setview('List') 
@@ -390,7 +390,6 @@ def play_resolve_movies(param):
     # }
     # '''
     # xbmc.executeJSONRPC(json_rpc_command)
-    import inputstreamhelper
     #serie_name = param.get('serie_name')
     #season = param.get('season', '')
     #episode = param.get('episode', '')
@@ -454,7 +453,6 @@ def play_resolve_series(param):
     # }
     # '''
     # xbmc.executeJSONRPC(json_rpc_command)
-    import inputstreamhelper
     serie_name = param.get('serie_name')
     season = param.get('season', '')
     episode = param.get('episode', '')

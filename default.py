@@ -155,7 +155,7 @@ def play_iptv(param):
     xbmc.executebuiltin('RunPlugin(%s)' % plugin)
 
 @route('/channels_pluto')
-def channels_pluto(param=None):
+def channels_pluto(param):
     channels = pluto.playlist_pluto()
     if channels:
         setcontent('movies')

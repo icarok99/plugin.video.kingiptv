@@ -1,134 +1,143 @@
 # -*- coding: utf-8 -*-
-
 try:
     from lib.helper import *
-except:
+except Exception:
     from helper import *
+
 import uuid
-from datetime import datetime, timedelta
+import re
+from datetime import datetime, timedelta, timezone
+from urllib.parse import quote_plus
+
 try:
     from lib.ClientScraper import cfscraper, USER_AGENT
-except ImportError:
-    from ClientScraper import cfscraper, USER_AGENT
+except Exception:
+    try:
+        from ClientScraper import cfscraper, USER_AGENT
+    except Exception:
+        cfscraper = None
+        USER_AGENT = 'Mozilla/5.0 (Kodi Addon)'
 
+def _parse_iso_datetime(s):
+    if not s:
+        return None
+    s = s.strip()
+    if s.endswith('Z'):
+        s = s[:-1] + '+00:00'
+    s = re.sub(r'([+-]\d{2}:\d)(?!\d)', lambda m: m.group(1) + '0', s)
+    try:
+        dt = datetime.fromisoformat(s)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
+    except Exception:
+        for fmt in ('%Y-%m-%dT%H:%M:%S.%f%z', '%Y-%m-%dT%H:%M:%S%z'):
+            try:
+                return datetime.strptime(s, fmt)
+            except Exception:
+                continue
+    return None
 
-
-#from_date = datetime.utcnow()
 def get_current_time():
-    response = requests.get('http://worldtimeapi.org/api/timezone/America/Sao_Paulo')
-    if response.status_code == 200:
-        data = response.json()
-        datetime_str = data['datetime']
-        # Ajusta o fuso horário para o formato padrão (corrige o erro do fuso horário)
-        if datetime_str.endswith('-03:0'):
-            datetime_str = datetime_str[:-1] + '0'
-        elif datetime_str.endswith('-03:0'):
-            datetime_str = datetime_str[:-1] + '00'
-        elif datetime_str.endswith('+00:0'):
-            datetime_str = datetime_str[:-1] + '00'
-        
-        # Converte a string em datetime
-        current_time = datetime.strptime(datetime_str, '%Y-%m-%dT%H:%M:%S.%f%z')
-        return current_time
-    else:
-        raise Exception("Failed to get time from API")
-
+    try:
+        resp = requests.get('https://worldtimeapi.org/api/timezone/America/Sao_Paulo', timeout=6)
+        resp.raise_for_status()
+        data = resp.json()
+        dt_str = data.get('datetime')
+        dt = _parse_iso_datetime(dt_str)
+        if dt is None:
+            raise ValueError
+        return dt
+    except Exception:
+        return datetime.now(timezone.utc)
 
 def playlist_pluto():
     channels_kodi = []
-    channels_info = []
-
     try:
         deviceid = str(uuid.uuid4())
-        days_to_add = 1
         time_brazil = get_current_time()
-        from_date = time_brazil
-        # from_date2 = datetime.utcnow()
-        to_date = from_date + timedelta(days=days_to_add)
-        from_str = from_date.strftime('%Y-%m-%dT%H:%M:%SZ')
-        to_str = to_date.strftime('%Y-%m-%dT%H:%M:%SZ')
-        url = "http://api.pluto.tv/v2/channels?start={}&stop={}".format(from_str, to_str)
-        channels = cfscraper.get(url).json()
-        
+        from_utc = time_brazil.astimezone(timezone.utc)
+        to_utc = (time_brazil + timedelta(days=1)).astimezone(timezone.utc)
+        from_str = from_utc.strftime('%Y-%m-%dT%H:%M:%SZ')
+        to_str = to_utc.strftime('%Y-%m-%dT%H:%M:%SZ')
+
+        url = f'https://api.pluto.tv/v2/channels?start={from_str}&stop={to_str}'
+        if cfscraper:
+            channels = cfscraper.get(url).json()
+        else:
+            headers = {'User-Agent': USER_AGENT}
+            channels = requests.get(url, headers=headers, timeout=10).json()
+
         for channel in channels:
-            if channel.get('number', 0) > 0:
-                channel_info = {
-                    'name': channel.get('name'),
-                    'thumbnail': channel.get('logo', {}).get('path'),
-                    'current_program': None,
-                    'next_program': None,
-                    'url': None
-                }
-                
-                url = channel.get('stitched', {}).get('urls', [{}])[0].get('url')
-                if url:
-                    url = url.replace('&deviceMake=', '&deviceMake=Firefox')
-                    url = url.replace('&deviceType=', '&deviceType=web')
-                    url = url.replace('&deviceId=unknown', '&deviceId={0}'.format(deviceid))
-                    url = url.replace('&deviceModel=', '&deviceModel=web')
-                    url = url.replace('&deviceVersion=unknown', '&deviceVersion=82.0')
-                    url = url.replace('&appName=&', '&appName=web&')
-                    url = url.replace('&appVersion=&', '&appVersion=5.9.1-e0b37ef76504d23c6bdc8157813d13333dfa33a3')
-                    url = url.replace('&sid=', '&sid={0}&sessionID={1}'.format(deviceid,deviceid))
-                    url = url.replace('&deviceDNT=0', '&deviceDNT=false')
-                    url = "{0}&serverSideAds=false&terminate=false&clientDeviceType=0&clientModelNumber=na&clientID={1}".format(url,deviceid)
-                    url = url + '|User-Agent=' + quote_plus(USER_AGENT)
-                    
-                    channel_info['url'] = url
+            number = channel.get('number', 0)
+            if not number or int(number) <= 0:
+                continue
 
-                now = None
-                for timeline in channel.get('timelines', []):
-                    current_program_start = datetime.fromisoformat(timeline['start'].replace('Z', '+00:00'))
-                    current_program_end = datetime.fromisoformat(timeline['stop'].replace('Z', '+00:00'))
-                    if current_program_start <= time_brazil <= current_program_end:
-                        now = current_program_end
-                        channel_info['current_program'] = {
-                            'title': timeline['episode']['name'],
-                            'description': timeline['episode'].get('description', ''),
-                            'start_time': current_program_start.isoformat(),
-                            'end_time': current_program_end.isoformat()
+            channel_name = channel.get('name', f'#{number}')
+            thumb = channel.get('logo', {}).get('path', '')
+            stream_url = None
+
+            stitched_urls = channel.get('stitched', {}).get('urls', [])
+            if stitched_urls:
+                stream_url = stitched_urls[0].get('url')
+                if stream_url:
+                    stream_url = stream_url.replace('&deviceMake=', '&deviceMake=Firefox')
+                    stream_url = stream_url.replace('&deviceType=', '&deviceType=web')
+                    stream_url = stream_url.replace('&deviceId=unknown', f'&deviceId={deviceid}')
+                    stream_url = stream_url.replace('&deviceModel=', '&deviceModel=web')
+                    stream_url = stream_url.replace('&deviceVersion=unknown', '&deviceVersion=82.0')
+                    stream_url = stream_url.replace('&appName=&', '&appName=web&')
+                    stream_url = stream_url.replace('&appVersion=&', '&appVersion=5.9.1-e0b37ef76504d23c6bdc8157813d13333dfa33a3')
+                    stream_url = stream_url.replace('&sid=', f'&sid={deviceid}&sessionID={deviceid}')
+                    stream_url = stream_url.replace('&deviceDNT=0', '&deviceDNT=false')
+                    stream_url = f"{stream_url}&serverSideAds=false&terminate=false&clientDeviceType=0&clientModelNumber=na&clientID={deviceid}"
+                    stream_url = stream_url + '|User-Agent=' + quote_plus(USER_AGENT)
+
+            timelines = channel.get('timelines', [])
+            current_program = None
+            next_program = None
+            for idx, t in enumerate(timelines):
+                start = _parse_iso_datetime(t.get('start'))
+                stop = _parse_iso_datetime(t.get('stop'))
+                if not start or not stop:
+                    continue
+                if start <= time_brazil <= stop:
+                    ep = t.get('episode', {})
+                    current_program = {
+                        'title': ep.get('name', ''),
+                        'description': ep.get('description', ''),
+                        'start': start,
+                        'stop': stop
+                    }
+                    if idx + 1 < len(timelines):
+                        nt = timelines[idx + 1]
+                        ns = _parse_iso_datetime(nt.get('start'))
+                        ne = _parse_iso_datetime(nt.get('stop'))
+                        nep = nt.get('episode', {})
+                        next_program = {
+                            'title': nep.get('name', ''),
+                            'description': nep.get('description', ''),
+                            'start': ns,
+                            'stop': ne
                         }
-                    if now:
-                        if current_program_start <= now < current_program_end:
-                            channel_info['next_program'] = {
-                            'title': timeline['episode']['name'],
-                            'description': timeline['episode'].get('description', ''),
-                            'start_time': current_program_start.isoformat(),
-                            'end_time': current_program_end.isoformat()
-                            }              
+                    break
 
-                channels_info.append(channel_info)
-    except:
-        pass
-    time_format = "%Y-%m-%dT%H:%M:%S%z"
-    if channels_info:
-        for n, channel in enumerate(channels_info):
             desc = ''
-            number = str(n+1)
-            channel_name = channel.get('name', number)
-            thumbnail = channel.get('thumbnail', '')
-            stream = channel.get('url', '')
-            current_program = channel.get('current_program', '')
-            program_now = current_program.get('title', '')
-            program_now_start = current_program.get('start_time', '')
-            desc_program_now = current_program.get('description', '')
-            program_end = channel.get('next_program', '')
-            program_end_title = program_end.get('title', '')
-            program_end_start = program_end.get('start_time', '')
-            desc_program_end = program_end.get('description', '')
+            if current_program:
+                local_now = current_program['start'].astimezone(timezone(timedelta(hours=-3)))
+                desc += f"[COLOR yellow][{local_now.strftime('%H:%M')}] {current_program['title']}[/COLOR]\n({current_program['description']})\n"
+            if next_program:
+                local_next = next_program['start'].astimezone(timezone(timedelta(hours=-3)))
+                desc += f"[COLOR yellow][{local_next.strftime('%H:%M')}] {next_program['title']}[/COLOR]\n({next_program['description']})\n"
 
-            if program_now_start:
-                time_obj = datetime.strptime(program_now_start, time_format)
-                new_time_obj = time_obj - timedelta(hours=3)
-                start = new_time_obj.strftime("%H:%M")
-                desc += '[COLOR yellow][{0}] {1}[/COLOR]\n({2})\n'.format(start,program_now,desc_program_now)
-            if program_end:
-                time_obj_ = datetime.strptime(program_end_start, time_format)
-                new_time_obj_ = time_obj_ - timedelta(hours=3)
-                start_ = new_time_obj_.strftime("%H:%M")
-                desc += '[COLOR yellow][{0}] {1}[/COLOR]\n({2})\n'.format(start_,program_end_title,desc_program_end)
-            if program_now:
-                channel_name = channel_name + ' - [COLOR yellow]' + program_now + '[/COLOR]'
-            channels_kodi.append((channel_name,desc,thumbnail,stream))
+            name_for_kodi = channel_name
+            if current_program and current_program.get('title'):
+                name_for_kodi = f"{channel_name} - [COLOR yellow]{current_program.get('title')}[/COLOR]"
+
+            channels_kodi.append((name_for_kodi, desc, thumb, stream_url))
+
+    except Exception as e:
+        log(f'playlist_pluto: erro geral: {e}')
+        raise
+
     return channels_kodi
-

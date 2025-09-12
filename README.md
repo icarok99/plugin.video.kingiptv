@@ -1,6 +1,4 @@
-## ADDON EXEMPLO PARA KODI
+## Instalar f4mTester para assistir tv ao vivo 
 
-Funciona melhor apartir do kodi 19
-
-[Download plugin.video.kingiptv.zip](https://github.com/zoreu/plugin.video.kingiptv/releases/download/0.0.2/plugin.video.kingiptv.zip)
+[Download plugin.video.f4mTester.zip](https://github.com/OnePlayHD/OneRepo/raw/refs/heads/master/plugin.video.f4mTester/plugin.video.f4mTester-4.2.5.zip)
 

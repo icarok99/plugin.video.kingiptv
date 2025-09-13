@@ -1,12 +1,9 @@
 # -*- coding: utf-8 -*-
 import os
-import re
 import time
-import urllib.request
 from lib.helper import *
 import inputstreamhelper
 from lib import xtream, tunein, pluto, imdb, api_vod
-from urllib.parse import quote_plus, unquote_plus
 
 # Definindo profile corretamente (caso não venha de helper)
 profile = xbmcvfs.translatePath('special://profile/addon_data/plugin.video.kingiptv')
@@ -51,8 +48,8 @@ except Exception as e:
 
 # BASIC CONFIG
 TITULO = '::: KING IPTV :::'
-API_CHANNELS = '\x68\x74\x74\x70\x73\x3a\x2f\x2f\x6f\x6e\x65\x70\x6c\x61\x79\x68\x64\x2e\x63\x6f\x6d\x2f\x6c\x69\x73\x74\x61\x73\x5f\x6f\x6e\x65\x70\x6c\x61\x79\x2f\x6d\x61\x73\x74\x65\x72\x2e\x74\x78\x74'
-API_RADIOS = 'https://gitea.com/joel00/kingaddon/raw/branch/main/radios.json'
+API_CHANNELS = '\x68\x74\x74\x70\x73\x3a\x2f\x2f\x64\x6f\x63\x73\x2e\x67\x6f\x6f\x67\x6c\x65\x2e\x63\x6f\x6d\x2f\x75\x63\x3f\x65\x78\x70\x6f\x72\x74\x3d\x64\x6f\x77\x6e\x6c\x6f\x61\x64\x26\x69\x64\x3d\x31\x31\x45\x4e\x5f\x4a\x59\x48\x4b\x36\x73\x38\x30\x55\x58\x72\x6d\x4d\x48\x47\x76\x47\x50\x79\x66\x75\x63\x32\x54\x37\x63\x39\x6a'
+API_RADIOS = '\x68\x74\x74\x70\x73\x3a\x2f\x2f\x64\x6f\x63\x73\x2e\x67\x6f\x6f\x67\x6c\x65\x2e\x63\x6f\x6d\x2f\x75\x63\x3f\x65\x78\x70\x6f\x72\x74\x3d\x64\x6f\x77\x6e\x6c\x6f\x61\x64\x26\x69\x64\x3d\x31\x31\x46\x34\x63\x48\x4a\x49\x47\x6c\x6d\x52\x70\x42\x56\x6a\x79\x4c\x5f\x34\x42\x56\x30\x6e\x6f\x7a\x4d\x4d\x53\x4e\x54\x6f\x62'
 
 if not exists(profile):
     try:
@@ -60,41 +57,6 @@ if not exists(profile):
     except:
         pass
 IPTV_PROBLEM_LOG = translate(os.path.join(profile, 'iptv_problems_log.txt'))
-
-def get_url(url, headers=None):
-    """Faz uma requisição HTTP e retorna o conteúdo."""
-    try:
-        req = urllib.request.Request(url)
-        req.add_header('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36')
-        if headers:
-            for key, value in headers.items():
-                req.add_header(key, value)
-        response = urllib.request.urlopen(req)
-        return response.read().decode('utf-8', errors='ignore')
-    except Exception as e:
-        xbmcgui.Dialog().ok("Erro", f"Falha ao conectar: {str(e)}")
-        return None
-
-def parse_m3u(m3u_content):
-    """Parseia um arquivo M3U e retorna canais organizados por group-title."""
-    channels = {}
-    lines = m3u_content.split('\n')
-    for i, line in enumerate(lines):
-        if line.startswith('#EXTM3U'):
-            continue
-        if line.startswith('#EXTINF'):
-            match_name = re.search(r'tvg-name="([^"]+)"', line)
-            name = match_name.group(1) if match_name else 'Sem Nome'
-            match_logo = re.search(r'tvg-logo="([^"]+)"', line)
-            logo = match_logo.group(1) if match_logo else ''
-            match_group = re.search(r'group-title="([^"]+)"', line)
-            group = match_group.group(1) if match_group else 'Outros'
-            url = lines[i + 1].strip() if i + 1 < len(lines) and not lines[i + 1].startswith('#') else ''
-            if url:
-                if group not in channels:
-                    channels[group] = []
-                channels[group].append((name, url, logo, ''))
-    return channels
 
 @route('/')
 def index():
@@ -120,44 +82,65 @@ def index():
     setview('WideList')
 
 @route('/playlistiptv')
-def playlistiptv():
-    master_content = get_url(API_CHANNELS)
-    if master_content:
-        lists = [line.strip() for line in master_content.split('\n') if line.strip() and line.startswith('http')]
-        for n, url in enumerate(lists, 1):
-            addMenuItem({'name': f'LISTA {n}', 'description': '', 'url': url}, destiny='/cat_channels')
+def playlistiptv(): 
+    iptv = xtream.parselist(API_CHANNELS)
+    if iptv:
+        for n, (dns, username, password) in enumerate(iptv):
+            n = n + 1
+            addMenuItem({'name': 'LISTA {0}'.format(str(n)), 'description': '', 'dns': dns, 'username': str(username), 'password': str(password)}, destiny='/cat_channels')
         end()
-        setview('WideList')
+        setview('WideList') 
     else:
-        notify('Sem lista iptv')
+        notify('Sem lista iptv') 
+
 
 @route('/cat_channels')
 def cat_channels(param):
-    url_m3u = param['url']
-    m3u_content = get_url(url_m3u)
-    if m3u_content:
-        channels = parse_m3u(m3u_content)
-        for group in channels:
-            addMenuItem({'name': group, 'description': '', 'url': url_m3u, 'group': group}, destiny='/open_group_channels')
+    dns = param['dns']
+    username = param['username']
+    password = param['password']
+    cat = xtream.API(dns,username,password).channels_category()
+    if cat:
+        for i in cat:
+            name, url = i
+            addMenuItem({'name': name, 'description': '', 'dns': dns, 'username': str(username), 'password': str(password), 'url': url}, destiny='/open_channels')
         end()
         setview('WideList')
     else:
-        notify(f'Lista {url_m3u} Offline')
+        url_problem = '{0}/get.php?username={1}&password={2}\n'.format(dns,username,password)
+        if six.PY2:
+            import io
+            open_file = lambda filename, mode: io.open(filename, mode, encoding='utf-8')
+        else:
+            open_file = lambda filename, mode: open(filename, mode, encoding='utf-8')
+        if exists(IPTV_PROBLEM_LOG):
+            check = False
+            with open(IPTV_PROBLEM_LOG, "r") as arquivo:
+                if url_problem in arquivo.read():
+                    check = True
+        else:
+            check = False
+        with open_file(IPTV_PROBLEM_LOG, "a") as arquivo:
+            if not check:
+                arquivo.write(url_problem)
+        notify('Lista Offline')
 
-@route('/open_group_channels')
-def open_group_channels(param):
-    url_m3u = param['url']
-    group = param['group']
-    m3u_content = get_url(url_m3u)
-    if m3u_content:
+@route('/open_channels')
+def open_channels(param):
+    dns = param['dns']
+    username = param['username']
+    password = param['password']
+    url = param['url'] 
+    open_ = xtream.API(dns,username,password).channels_open(url)
+    if open_:
         setcontent('movies')
-        channels = parse_m3u(m3u_content)
-        for name, link, thumb, desc in channels.get(group, []):
+        for i in open_:
+            name,link,thumb,desc = i
             addMenuItem({'name': name, 'description': desc, 'iconimage': thumb, 'url': link}, destiny='/play_iptv', folder=False)
         end()
         setview('List')
     else:
-        notify('Opção indisponível')
+        notify('Opção indisponivel')
 
 @route('/play_iptv')
 def play_iptv(param):
@@ -165,12 +148,11 @@ def play_iptv(param):
     description = param['description']
     iconimage = param['iconimage']
     url = param['url']
-    plugin = f'plugin://plugin.video.f4mTester/?streamtype=HLSRETRY&name={quote_plus(str(name))}&iconImage={quote_plus(str(iconimage))}&thumbnailImage={quote_plus(str(iconimage))}&description={quote_plus(description)}&url={quote_plus(url)}'
-    xbmc.executebuiltin(f'RunPlugin({plugin})')
+    plugin = 'plugin://plugin.video.f4mTester/?streamtype=HLSRETRY&name=' + quote_plus(str(name)) + '&iconImage=' + quote_plus(str(iconimage)) + '&thumbnailImage=' + quote_plus(str(iconimage)) + '&description=' + quote_plus(description) + '&url=' + quote_plus(url)
+    xbmc.executebuiltin('RunPlugin(%s)' % plugin)
 
 @route('/channels_pluto')
 def channels_pluto(param):
-    # o decorator passa params; aceitamos mas não usamos aqui
     channels = pluto.playlist_pluto()
     if channels:
         setcontent('movies')

@@ -229,7 +229,7 @@ def find_series():
         if itens:
             setcontent('tvshows')
             for name, img, page, year, imdb_id in itens:
-                addMenuItem({'name': name, 'description': '', 'iconimage': img, 'url': page, 'imdbnumber': imdb_id, 'year': year}, destiny='/open_imdb_seasons')
+                addMenuItem({'name': name, 'description': '', 'iconimage': img, 'url': page, 'imdbnumber': imdb_id}, destiny='/open_imdb_seasons')
             end()
             setview('Wall')
 
@@ -448,6 +448,6 @@ def play_resolve_series(param):
             info.setEpisode(int(episode))
             info.setMediaType('episode')
             
-            xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, play_item)
+            xbmcplugin.setResolvedUrl(handle, True, play_item)
     else:
         notify('Stream Indisponivel')

@@ -448,6 +448,6 @@ def play_resolve_series(param):
             info.setEpisode(int(episode))
             info.setMediaType('episode')
             
-            xbmcplugin.setResolvedUrl(handle, True, play_item)
+            xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, play_item)
     else:
         notify('Stream Indisponivel')

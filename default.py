@@ -93,7 +93,6 @@ def playlistiptv():
     else:
         notify('Sem lista iptv') 
 
-
 @route('/cat_channels')
 def cat_channels(param):
     dns = param['dns']
@@ -417,9 +416,8 @@ def play_resolve_series(param):
     imdb = param.get('imdbnumber', '')
     description = param.get('description', '')
     fanart = param.get('fanart', '')
-    episode_title = param.get('episode_title', '')  # Recupera o título do episódio
+    episode_title = param.get('episode_title', '')
     
-    # Formata o título do episódio, com fallback caso episode_title esteja vazio
     display_title = episode_title if episode_title else f'Episode {episode}'
     
     url = api_vod.VOD().tvshows(imdb, season, episode)
@@ -442,14 +440,14 @@ def play_resolve_series(param):
             play_item.setProperty('inputstream.adaptive.original_audio_language', 'pt')
             
             info = play_item.getVideoInfoTag()
-            info.setTitle(display_title)  # Define o título do episódio (ex.: "A Whole New Whirled")
-            info.setTvShowTitle(serie_name)  # Define o título da série (ex.: "Pacificador")
+            info.setTitle(display_title)
+            info.setTvShowTitle(serie_name)
             info.setPlot(description)
             info.setIMDBNumber(str(imdb))
             info.setSeason(int(season))
             info.setEpisode(int(episode))
             info.setMediaType('episode')
             
-            xbmcplugin.setResolvedUrl(handle, True, play_item)
+            xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, play_item)
     else:
         notify('Stream Indisponivel')

@@ -219,7 +219,7 @@ def find_movies():
             for name, img, page, year, imdb_id in itens:
                 addMenuItem({'name': name, 'description': '', 'iconimage': img, 'url': '', 'imdbnumber': imdb_id, 'year': year}, destiny='/play_resolve_movies', folder=False)
             end()
-            setview('Wall')
+            setview('List')
 
 @route('/find_series')
 def find_series():
@@ -231,7 +231,7 @@ def find_series():
             for name, img, page, year, imdb_id in itens:
                 addMenuItem({'name': name, 'description': '', 'iconimage': img, 'url': page, 'imdbnumber': imdb_id}, destiny='/open_imdb_seasons')
             end()
-            setview('Wall')
+            setview('List')
 
 @route('/imdb_movies_250')
 def movies_250(param=None):
@@ -252,7 +252,7 @@ def movies_250(param=None):
             addMenuItem({'name': 'Próxima Página', 'page': page + 1}, destiny='/imdb_movies_250')
 
         end()
-        setview('Wall')
+        setview('List')
 
 @route('/imdb_series_250')
 def series_250(param=None):
@@ -273,7 +273,7 @@ def series_250(param=None):
             addMenuItem({'name': 'Próxima Página', 'page': page + 1}, destiny='/imdb_series_250')
 
         end()
-        setview('Wall')
+        setview('List')
 
 @route('/imdb_movies_popular')
 def movies_popular(param=None):
@@ -294,7 +294,7 @@ def movies_popular(param=None):
             addMenuItem({'name': 'Próxima Página', 'page': page + 1}, destiny='/imdb_movies_popular')
 
         end()
-        setview('Wall')
+        setview('List')
 
 @route('/imdb_series_popular')
 def series_popular(param=None):
@@ -315,7 +315,7 @@ def series_popular(param=None):
             addMenuItem({'name': 'Próxima Página', 'page': page + 1}, destiny='/imdb_series_popular')
 
         end()
-        setview('Wall')
+        setview('List')
 
 @route('/open_imdb_seasons')
 def open_imdb_seasons(param):

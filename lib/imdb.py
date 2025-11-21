@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import re
 import json
+import html
 from urllib.parse import quote
 from bs4 import BeautifulSoup
 
@@ -29,11 +30,12 @@ class IMDBScraper:
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36'
         }
 
-    def soup(self, html):
-        return BeautifulSoup(html, 'html.parser')
+    def soup(self, html_text):
+        return BeautifulSoup(html_text, 'html.parser')
 
-    def _extract_next_data(self, html):
-        match = re.search(r'<script id="__NEXT_DATA__" type="application/json">(.+?)</script>', html, re.DOTALL)
+    def _extract_next_data(self, html_text):
+        match = re.search(r'<script id="__NEXT_DATA__" type="application/json">(.+?)</script>',
+                          html_text, re.DOTALL)
         if not match:
             return None
         try:
@@ -67,6 +69,8 @@ class IMDBScraper:
                 imdb_id = 'tt' + imdb_id
 
                 name = list_item.get('titleText', '').strip()
+                name = html.unescape(name)
+
                 year = str(list_item.get('releaseYear', 0) or 0)
                 img_original = list_item.get('primaryImage', {}).get('url', '')
                 img = resize_poster(img_original)
@@ -75,7 +79,6 @@ class IMDBScraper:
                     continue
 
                 page = f'{self.base}/title/{imdb_id}/'
-                name = name.replace('&', '&').replace("'", "'")
                 itens.append((name, img, page, year, imdb_id))
 
         except Exception:
@@ -109,6 +112,8 @@ class IMDBScraper:
                 imdb_id = 'tt' + imdb_id
 
                 name = list_item.get('titleText', '').strip()
+                name = html.unescape(name)
+
                 year = str(list_item.get('releaseYear', 0) or 0)
                 img_original = list_item.get('primaryImage', {}).get('url', '')
                 img = resize_poster(img_original)
@@ -117,7 +122,6 @@ class IMDBScraper:
                     continue
 
                 page = f'{self.base}/title/{imdb_id}/'
-                name = name.replace('&', '&').replace("'", "'")
                 itens.append((name, img, page, year, imdb_id))
 
         except Exception:
@@ -141,66 +145,86 @@ class IMDBScraper:
         itens = []
         try:
             url = self.base + chart_path
-            html = cfscraper.get(url, headers=self.headers).text
-            json_match = re.search(r'<script type="application/ld\+json">(.+?)</script>', html, re.DOTALL)
+            html_text = cfscraper.get(url, headers=self.headers).text
+            json_match = re.search(r'<script type="application/ld\+json">(.+?)</script>',
+                                   html_text, re.DOTALL)
             if not json_match:
                 return itens
+
             dict_ = json.loads(json_match.group(1))
             all_items = []
+
             for i in dict_['itemListElement']:
                 data = i['item']
                 name = data.get('alternateName', data.get('name', ''))
+                name = html.unescape(name)
+
                 url = data['url']
-                description = data.get('description', '')
+                description = html.unescape(data.get('description', ''))
                 image = resize_poster(data.get('image', ''))
                 if not image:
                     continue
+
                 imdb_id = 'tt' + re.findall(r'/tt(.*?)/', url)[0]
-                name = name.replace('&', '&').replace("'", "'")
-                description = description.replace('&', '&').replace("'", "'")
                 all_items.append((name, image, url, description, imdb_id))
+
             start = (page - 1) * per_page
             end = start + per_page
             itens = all_items[start:end]
+
         except Exception:
             pass
+
         return itens
 
     def imdb_seasons(self, url):
         itens = []
         try:
-            html = cfscraper.get(url, headers=self.headers).text
-            data = self._extract_next_data(html)
+            html_text = cfscraper.get(url, headers=self.headers).text
+            data = self._extract_next_data(html_text)
             if not data:
                 return itens
+
             seasons = data['props']['pageProps']['mainColumnData']['episodes']['seasons']
             imdb_id = 'tt' + re.findall(r'/tt(.*?)/', url)[0]
             season_base_url = self.base + '/title/' + imdb_id + '/episodes/?season='
+
             for season in seasons:
                 num = str(season['number'])
                 name = f"{num} temporada"
                 url_season = season_base_url + num
                 itens.append((num, name, url_season))
+
         except Exception:
             pass
+
         return itens
 
     def imdb_episodes(self, url):
         itens = []
         try:
-            html = cfscraper.get(url, headers=self.headers).text
-            data = self._extract_next_data(html)
+            html_text = cfscraper.get(url, headers=self.headers).text
+            data = self._extract_next_data(html_text)
             if not data:
                 return itens
+
             episodes = data['props']['pageProps']['contentData']['section']['episodes']['items']
-            fanart = resize_poster(data['props']['pageProps']['contentData']['entityMetadata'].get('primaryImage', {}).get('url', ''))
+            fanart = resize_poster(
+                data['props']['pageProps']['contentData']['entityMetadata']
+                .get('primaryImage', {})
+                .get('url', '')
+            )
+
             for idx, ep in enumerate(episodes, start=1):
                 name = ep.get('titleText', f'Episódio {idx}')
+                name = html.unescape(name)
+
                 img = resize_poster(ep.get('image', {}).get('url', ''))
-                description = ep.get('plot', '')
-                name = name.replace('&', '&').replace("'", "'")
-                description = description.replace('&', '&').replace("'", "'")
+                description = html.unescape(ep.get('plot', ''))
+
                 itens.append((str(idx), name, img, fanart, description))
+
         except Exception:
             pass
+
         return itens

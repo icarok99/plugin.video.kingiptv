@@ -14,7 +14,7 @@ headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:141.0) Ge
 
 class VOD:
     def __init__(self):
-        original_base = 'https://superflixapi.work'
+        original_base = 'https://superflixapi.asia'
         self.base = self.get_last_base(original_base)
         print(f"Initialized VOD with base URL: {self.base}")
 
@@ -112,5 +112,6 @@ class VOD:
 #print(VOD().movie('tt0106697'))
 #print(VOD().tvshows('tt3107288','1','1'))
     
+
 
 

@@ -70,7 +70,7 @@ def index():
     addMenuItem({'name': TITULO, 'description': ''}, destiny='')
     addMenuItem({'name': 'LISTAS IPTV', 'description': ''}, destiny='/playlistiptv')
     addMenuItem({'name': 'CANAIS PLUTO', 'description': ''}, destiny='/channels_pluto')
-    addMenuMenuItem({'name': 'RADIOS', 'description': ''}, destiny='/radios')
+    addMenuItem({'name': 'RADIOS', 'description': ''}, destiny='/radios')
     addMenuItem({'name': 'IMDB Filmes', 'description': ''}, destiny='/imdb_movies')
     addMenuItem({'name': 'IMDB Series', 'description': ''}, destiny='/imdb_series')
     end()

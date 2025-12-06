@@ -331,8 +331,8 @@ def open_imdb_episodes(param):
                 'iconimage': img,
                 'fanart': fanart,
                 'imdbnumber': imdb_id,
-                'season': season,
-                'episode': str(episode_number),
+                'season_num': season,
+                'episode_num': str(episode_number),
                 'serie_name': serie_name,
                 'episode_title': name,
                 'playable': 'true'
@@ -388,8 +388,8 @@ def play_resolve_movies(param):
 def play_resolve_series(param):
     notify('Aguarde')
     serie_name = param.get('serie_name', '')
-    season = param.get('season', '')
-    episode = param.get('episode', '')
+    season = param.get('season_num', '')
+    episode = param.get('episode_num', '')
     iconimage = param.get('iconimage', '')
     imdb_number = param.get('imdbnumber', '')
     description = param.get('description', '')

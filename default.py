@@ -426,8 +426,8 @@ def play_resolve_series(param):
             info.setTvShowTitle(serie_name)
             info.setPlot(description)
             info.setIMDBNumber(str(imdb_number))
-            info.setSeason(int(season))
-            info.setEpisode(int(episode))
+            #info.setSeason(int(season))
+            #info.setEpisode(int(episode))
             info.setMediaType('episode')
 
             xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, play_item)

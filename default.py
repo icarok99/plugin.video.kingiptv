@@ -70,7 +70,7 @@ def index():
     addMenuItem({'name': TITULO, 'description': ''}, destiny='')
     addMenuItem({'name': 'LISTAS IPTV', 'description': ''}, destiny='/playlistiptv')
     addMenuItem({'name': 'CANAIS PLUTO', 'description': ''}, destiny='/channels_pluto')
-    addMenuItem({'name': 'RADIOS', 'description': ''}, destiny='/radios')
+    addMenuMenuItem({'name': 'RADIOS', 'description': ''}, destiny='/radios')
     addMenuItem({'name': 'IMDB Filmes', 'description': ''}, destiny='/imdb_movies')
     addMenuItem({'name': 'IMDB Series', 'description': ''}, destiny='/imdb_series')
     end()
@@ -161,26 +161,30 @@ def play_iptv2(param):
     name = param.get('name', 'Pluto TV')
     description = param.get('description', '')
     iconimage = param.get('iconimage', '')
-    
+
     is_helper = inputstreamhelper.Helper("hls")
     if is_helper.check_inputstream():
+
         play_item = xbmcgui.ListItem(path=url)
         play_item.setContentLookup(False)
         play_item.setArt({"icon": "DefaultVideo.png", "thumb": iconimage})
         play_item.setMimeType("application/vnd.apple.mpegurl")
-        play_item.setProperty('inputstream', is_helper.inputstream_addon)
+
+        play_item.setProperty('inputstreamaddon', is_helper.inputstream_addon)
         play_item.setProperty("inputstream.adaptive.manifest_type", "hls")
+
         if '|' in url:
             header = unquote_plus(url.split('|')[1])
-            play_item.setProperty("inputstream.adaptive.manifest_headers", header)
+            play_item.setProperty("inputstream.adaptive.stream_headers", header)
+
         play_item.setProperty('inputstream.adaptive.manifest_update_parameter', 'full')
         play_item.setProperty('inputstream.adaptive.is_realtime_stream', 'true')
-        
+
         info = play_item.getVideoInfoTag()
         info.setTitle(name)
         info.setPlot(description)
         info.setMediaType('video')
-        
+
         xbmc.Player().play(item=url, listitem=play_item)
 
 @route('/radios')
@@ -341,36 +345,41 @@ def play_resolve_movies(param):
     notify('Aguarde')
     name = param.get('name', '')
     iconimage = param.get('iconimage', '')
-    imdb = param.get('imdbnumber', '')
+    imdb_number = param.get('imdbnumber', '')
     description = param.get('description', '')
     year = param.get('year', '')
     
-    url = api_vod.VOD().movie(imdb)
+    url = api_vod.VOD().movie(imdb_number)
     if url:
         notify('Escolha o audio portugues nos ajustes')
         is_helper = inputstreamhelper.Helper("hls")
         if is_helper.check_inputstream():
+
             play_item = xbmcgui.ListItem(path=url)
             play_item.setContentLookup(False)
             play_item.setArt({"icon": "DefaultVideo.png", "thumb": iconimage})
             play_item.setMimeType("application/vnd.apple.mpegurl")
-            play_item.setProperty('inputstream', is_helper.inputstream_addon)
+
+            play_item.setProperty('inputstreamaddon', is_helper.inputstream_addon)
             play_item.setProperty("inputstream.adaptive.manifest_type", "hls")
+
             if '|' in url:
                 header = unquote_plus(url.split('|')[1])
-                play_item.setProperty("inputstream.adaptive.manifest_headers", header)
+                play_item.setProperty("inputstream.adaptive.stream_headers", header)
+
             play_item.setProperty('inputstream.adaptive.manifest_update_parameter', 'full')
             play_item.setProperty('inputstream.adaptive.is_realtime_stream', 'true')
             play_item.setProperty('inputstream.adaptive.original_audio_language', 'pt')
-            
+
             info = play_item.getVideoInfoTag()
             info.setTitle(name)
             info.setPlot(description)
-            info.setIMDBNumber(str(imdb))
+            info.setIMDBNumber(str(imdb_number))
             info.setMediaType('movie')
+
             if year:
                 info.setYear(int(year))
-            
+
             xbmc.Player().play(item=url, listitem=play_item)
     else:
         notify('Stream Indisponivel')
@@ -382,40 +391,45 @@ def play_resolve_series(param):
     season = param.get('season', '')
     episode = param.get('episode', '')
     iconimage = param.get('iconimage', '')
-    imdb = param.get('imdbnumber', '')
+    imdb_number = param.get('imdbnumber', '')
     description = param.get('description', '')
     fanart = param.get('fanart', '')
     episode_title = param.get('episode_title', '')
-    
-    display_title = episode_title if episode_title else f'Episode {episode}'
-    
-    url = api_vod.VOD().tvshows(imdb, season, episode)
+
+    display_title = episode_title if episode_title else f'Episódio {episode}'
+
+    url = api_vod.VOD().tvshows(imdb_number, season, episode)
     if url:
         notify('Escolha o audio portugues nos ajustes')
+        
         is_helper = inputstreamhelper.Helper("hls")
         if is_helper.check_inputstream():
+
             play_item = xbmcgui.ListItem(path=url)
             play_item.setContentLookup(False)
             play_item.setArt({"icon": "DefaultVideo.png", "thumb": iconimage, "fanart": fanart})
             play_item.setMimeType("application/vnd.apple.mpegurl")
-            play_item.setProperty('inputstream', is_helper.inputstream_addon)
+
+            play_item.setProperty('inputstreamaddon', is_helper.inputstream_addon)
             play_item.setProperty("inputstream.adaptive.manifest_type", "hls")
+
             if '|' in url:
                 header = unquote_plus(url.split('|')[1])
-                play_item.setProperty("inputstream.adaptive.manifest_headers", header)
+                play_item.setProperty("inputstream.adaptive.stream_headers", header)
+
             play_item.setProperty('inputstream.adaptive.manifest_update_parameter', 'full')
             play_item.setProperty('inputstream.adaptive.is_realtime_stream', 'true')
             play_item.setProperty('inputstream.adaptive.original_audio_language', 'pt')
-            
+
             info = play_item.getVideoInfoTag()
             info.setTitle(display_title)
             info.setTvShowTitle(serie_name)
             info.setPlot(description)
-            info.setIMDBNumber(str(imdb))
+            info.setIMDBNumber(str(imdb_number))
             info.setSeason(int(season))
             info.setEpisode(int(episode))
             info.setMediaType('episode')
-            
+
             xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, play_item)
     else:
         notify('Stream Indisponivel')

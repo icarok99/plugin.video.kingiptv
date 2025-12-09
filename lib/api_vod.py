@@ -11,7 +11,7 @@ headers = {
 
 class VOD:
     def __init__(self):
-        self.base = self._resolve_base('https://superflixapi.asia')
+        self.base = self._resolve_base('https://superflixapi.run')
 
     def _resolve_base(self, url):
         try:
@@ -119,3 +119,4 @@ class VOD:
             pass
 
         return ''
+

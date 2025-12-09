@@ -355,13 +355,15 @@ def play_resolve_movies(param):
         stream_url = url.split('|')[0] if '|' in url else url
         play_item = xbmcgui.ListItem(path=stream_url)
         play_item.setArt({'thumb': iconimage, 'icon': iconimage, 'fanart': iconimage})
-        play_item.setInfo('video', {
-            'title': name,
-            'plot': description,
-            'imdbnumber': imdb_number,
-            'mediatype': 'movie',
-            'year': int(year) if year else None
-        })
+
+        info_tag = play_item.getVideoInfoTag()
+        info_tag.setTitle(name)
+        info_tag.setPlot(description)
+        info_tag.setIMDBNumber(imdb_number)
+        info_tag.setMediaType('movie')
+        if year:
+            info_tag.setYear(int(year))
+
         xbmc.Player().play(item=stream_url, listitem=play_item)
     else:
         notify('Stream Indisponivel')
@@ -383,17 +385,17 @@ def play_resolve_series(param):
         notify('Escolha o audio portugues nos ajustes')
         stream_url = url.split('|')[0] if '|' in url else url
         display_title = episode_title if episode_title else f'S{season}E{episode.zfill(2)}'
+        
         play_item = xbmcgui.ListItem(path=stream_url)
         play_item.setArt({'thumb': iconimage, 'icon': iconimage, 'fanart': fanart or iconimage})
-        play_item.setInfo('video', {
-            'title': display_title,
-            'tvshowtitle': serie_name,
-            #'season': int(season),
-            #'episode': int(episode),
-            'plot': description,
-            'imdbnumber': imdb_number,
-            'mediatype': 'episode'
-        })
+
+        info_tag = play_item.getVideoInfoTag()
+        info_tag.setTitle(display_title)
+        info_tag.setTvShowTitle(serie_name)
+        info_tag.setPlot(description)
+        info_tag.setIMDBNumber(imdb_number)
+        info_tag.setMediaType('episode')
+
         xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, play_item)
     else:
         notify('Stream Indisponivel')

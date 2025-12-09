@@ -13,7 +13,7 @@ try:
     import requests
 
     UPDATE_CHECK_FILE = os.path.join(profile, 'last_checked_date.txt')
-    REMOTE_DATE_URL = 'https://raw.githubusercontent.com/icarok99/plugin.video.kingiptv/main/last_update.txt'
+    REMOTE_DATE_URL = 'https://raw.githubusercontent.com/icarok99/plugin.video.kingiptv/main2/last_update.txt'
 
     def get_local_date():
         try:
@@ -355,15 +355,13 @@ def play_resolve_movies(param):
         stream_url = url.split('|')[0] if '|' in url else url
         play_item = xbmcgui.ListItem(path=stream_url)
         play_item.setArt({'thumb': iconimage, 'icon': iconimage, 'fanart': iconimage})
-
-        info_tag = play_item.getVideoInfoTag()
-        info_tag.setTitle(name)
-        info_tag.setPlot(description)
-        info_tag.setIMDBNumber(imdb_number)
-        info_tag.setMediaType('movie')
-        if year:
-            info_tag.setYear(int(year))
-
+        play_item.setInfo('video', {
+            'title': name,
+            'plot': description,
+            'imdbnumber': imdb_number,
+            'mediatype': 'movie',
+            'year': int(year) if year else None
+        })
         xbmc.Player().play(item=stream_url, listitem=play_item)
     else:
         notify('Stream Indisponivel')
@@ -385,17 +383,17 @@ def play_resolve_series(param):
         notify('Escolha o audio portugues nos ajustes')
         stream_url = url.split('|')[0] if '|' in url else url
         display_title = episode_title if episode_title else f'S{season}E{episode.zfill(2)}'
-        
         play_item = xbmcgui.ListItem(path=stream_url)
         play_item.setArt({'thumb': iconimage, 'icon': iconimage, 'fanart': fanart or iconimage})
-
-        info_tag = play_item.getVideoInfoTag()
-        info_tag.setTitle(display_title)
-        info_tag.setTvShowTitle(serie_name)
-        info_tag.setPlot(description)
-        info_tag.setIMDBNumber(imdb_number)
-        info_tag.setMediaType('episode')
-
+        play_item.setInfo('video', {
+            'title': display_title,
+            'tvshowtitle': serie_name,
+            #'season': int(season),
+            #'episode': int(episode),
+            'plot': description,
+            'imdbnumber': imdb_number,
+            'mediatype': 'episode'
+        })
         xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, play_item)
     else:
         notify('Stream Indisponivel')

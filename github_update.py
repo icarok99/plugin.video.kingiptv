@@ -11,8 +11,8 @@ ADDON_ID = 'plugin.video.kingiptv'
 ADDON_PATH = xbmcvfs.translatePath(f'special://home/addons/{ADDON_ID}/')
 
 # URLs do repositório
-RAW_BASE_URL = 'https://raw.githubusercontent.com/icarok99/plugin.video.kingiptv/main/'
-CONTENTS_API_URL = 'https://api.github.com/repos/icarok99/plugin.video.kingiptv/contents/'
+RAW_BASE_URL = 'https://raw.githubusercontent.com/icarok99/plugin.video.kingiptv/main2/'
+CONTENTS_API_URL = 'https://api.github.com/repos/icarok99/plugin.video.kingiptv/contents/?ref=main2'
 
 def make_github_request(url):
     try:

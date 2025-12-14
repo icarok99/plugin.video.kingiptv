@@ -42,7 +42,7 @@ class VOD:
             if not options:
                 return ''
 
-            fast_id = next((opt['ID'] for opt in options if any(x in (opt.get('server','') + opt.get('title','')).lower() for x in ['fast','flash','zap'])), None)
+            fast_id = next((opt['ID'] for opt in options if any(x in (opt.get('server','') + opt.get('title','')).lower() for x in ['fast','fast 2','fast 3'])), None)
             video_id = fast_id or options[0]['ID']
 
             r = requests.post(api, data={'action': 'getPlayer', 'video_id': video_id}, headers=h, timeout=15)
@@ -67,7 +67,7 @@ class VOD:
             api = f"{self.base}/api"
             h = {**headers, 'origin': self.base, 'referer': url}
 
-            fast_id = next((b.get('data-id') for b in btns if any(x in b.get_text(strip=True).lower() for x in ['fast','flash','zap']) or b.find("i", class_=lambda x: x and ('flash' in x or 'zap' in x))), None)
+            fast_id = next((b.get('data-id') for b in btns if any(x in b.get_text(strip=True).lower() for x in ['fast','fast 2','fast 3']) or b.find("i", class_=lambda x: x and ('fast 2' in x or 'fast 3' in x))), None)
             video_id = fast_id or btns[0].get('data-id')
 
             r = requests.post(api, data={'action': 'getPlayer', 'video_id': video_id}, headers=h, timeout=15)
@@ -119,3 +119,4 @@ class VOD:
             pass
 
         return ''
+

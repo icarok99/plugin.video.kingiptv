@@ -12,32 +12,33 @@ try:
     from datetime import datetime
     import requests
 
-    UPDATE_FILE = os.path.join(profile, 'last_update.txt')
+    UPDATE_CHECK_FILE = os.path.join(profile, 'last_checked_date.txt')
     REMOTE_DATE_URL = 'https://raw.githubusercontent.com/icarok99/plugin.video.kingiptv/main/last_update.txt'
 
     def get_local_date():
         try:
-            with open(UPDATE_FILE, 'r') as f:
+            with open(UPDATE_CHECK_FILE, 'r') as f:
                 return datetime.strptime(f.read().strip(), '%d-%m-%Y')
         except:
-            return None
+            return datetime.strptime('26-07-2025', '%d-%m-%Y')
+
+    def save_local_date(date_str):
+        with open(UPDATE_CHECK_FILE, 'w') as f:
+            f.write(date_str)
 
     def is_update_needed_by_date():
         try:
             response = requests.get(REMOTE_DATE_URL, timeout=5)
-            if response.status_code != 200:
-                return None
-
-            remote_date = datetime.strptime(response.text.strip(), '%d-%m-%Y')
-            local_date = get_local_date()
-
-            if not local_date or remote_date > local_date:
-                return remote_date
-
+            if response.status_code == 200:
+                remote_date_str = response.text.strip()
+                remote_date = datetime.strptime(remote_date_str, '%d-%m-%Y')
+                local_date = get_local_date()
+                if remote_date > local_date:
+                    save_local_date(remote_date_str)
+                    return True
         except Exception as e:
-            print('Erro update:', e)
-
-        return None
+            print(f'Erro ao verificar data remota: {e}')
+        return False
 
 except Exception as e:
     from xbmcgui import Dialog
@@ -52,22 +53,16 @@ if not exists(profile):
         os.mkdir(profile)
     except:
         pass
-
 IPTV_PROBLEM_LOG = translate(os.path.join(profile, 'iptv_problems_log.txt'))
 
 @route('/')
 def index():
     try:
-        update_date = is_update_needed_by_date()
-        if update_date:
+        if is_update_needed_by_date():
             from xbmcgui import Dialog
-            Dialog().notification('KING IPTV', 'Atualizando...', xbmcgui.NOTIFICATION_INFO, 3000)
-
-            if github_update.update_files():
-                with open(UPDATE_FILE, 'w') as f:
-                    f.write(update_date.strftime('%d-%m-%Y'))
-
-                Dialog().notification('KING IPTV', 'Atualizado com sucesso!', xbmcgui.NOTIFICATION_INFO, 3000)
+            Dialog().notification('KING IPTV', 'Atualizando...', xbmcgui.NOTIFICATION_INFO, 5000)
+            github_update.update_files()
+            Dialog().notification('KING IPTV', 'Atualizado com sucesso!', xbmcgui.NOTIFICATION_INFO, 5000)
     except Exception as e:
         from xbmcgui import Dialog
         Dialog().notification('KING IPTV', f'Erro na atualização: {e}', xbmcgui.NOTIFICATION_ERROR, 5000)

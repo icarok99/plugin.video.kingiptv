@@ -23,29 +23,59 @@ class VOD:
     def tvshows(self, imdb, season, episode):
         try:
             url = f'{self.base}/serie/{imdb}/{season}/{episode}'
-            r = requests.get(url, headers={**headers, 'sec-fetch-dest': 'iframe'}, timeout=15)
+            r = requests.get(
+                url,
+                headers={**headers, 'sec-fetch-dest': 'iframe'},
+                timeout=15
+            )
 
             match = re.search(r'var ALL_EPISODES\s*=\s*({.*?});', r.text, re.DOTALL)
             if not match:
                 return ''
 
             episodes = json.loads(match.group(1))
-            contentid = next((ep['ID'] for ep in episodes.get(str(season), []) if str(ep.get('epi_num')) == str(episode)), None)
+            contentid = next(
+                (
+                    ep['ID']
+                    for ep in episodes.get(str(season), [])
+                    if str(ep.get('epi_num')) == str(episode)
+                ),
+                None
+            )
+
             if not contentid:
                 return ''
 
             api = f"{self.base}/api"
-            h = {**headers, 'origin': self.base, 'referer': url}
+            h = {
+                **headers,
+                'origin': self.base,
+                'referer': url
+            }
 
-            r = requests.post(api, data={'action': 'getOptions', 'contentid': contentid}, headers=h, timeout=15)
+            r = requests.post(
+                api,
+                data={'action': 'getOptions', 'contentid': contentid},
+                headers=h,
+                timeout=15
+            )
+
             options = r.json().get('data', {}).get('options', [])
             if not options:
                 return ''
 
-            fast_id = next((opt['ID'] for opt in options if any(x in (opt.get('server','') + opt.get('title','')).lower() for x in ['fast','fast 2','fast 3'])), None)
-            video_id = fast_id or options[0]['ID']
+            if len(options) > 1:
+                video_id = options[1]['ID']  # FAST
+            else:
+                video_id = options[0]['ID']
 
-            r = requests.post(api, data={'action': 'getPlayer', 'video_id': video_id}, headers=h, timeout=15)
+            r = requests.post(
+                api,
+                data={'action': 'getPlayer', 'video_id': video_id},
+                headers=h,
+                timeout=15
+            )
+
             video_url = r.json().get('data', {}).get('video_url', '').strip()
             if not video_url:
                 return ''
@@ -58,19 +88,42 @@ class VOD:
     def movie(self, imdb):
         try:
             url = f'{self.base}/filme/{imdb}'
-            r = requests.get(url, headers={**headers, 'sec-fetch-dest': 'iframe'}, timeout=15)
+            r = requests.get(
+                url,
+                headers={**headers, 'sec-fetch-dest': 'iframe'},
+                timeout=15
+            )
+
             soup = BeautifulSoup(r.text, "html.parser")
             btns = soup.find_all("div", class_="btn-server")
             if not btns:
                 return ''
 
             api = f"{self.base}/api"
-            h = {**headers, 'origin': self.base, 'referer': url}
+            h = {
+                **headers,
+                'origin': self.base,
+                'referer': url
+            }
 
-            fast_id = next((b.get('data-id') for b in btns if any(x in b.get_text(strip=True).lower() for x in ['fast','fast 2','fast 3']) or b.find("i", class_=lambda x: x and ('fast 2' in x or 'fast 3' in x))), None)
+            fast_id = next(
+                (
+                    b.get('data-id')
+                    for b in btns
+                    if any(x in b.get_text(strip=True).lower() for x in ['fast', 'fast 2', 'fast 3'])
+                ),
+                None
+            )
+
             video_id = fast_id or btns[0].get('data-id')
 
-            r = requests.post(api, data={'action': 'getPlayer', 'video_id': video_id}, headers=h, timeout=15)
+            r = requests.post(
+                api,
+                data={'action': 'getPlayer', 'video_id': video_id},
+                headers=h,
+                timeout=15
+            )
+
             video_url = r.json().get('data', {}).get('video_url', '').strip()
             if not video_url:
                 return ''
@@ -84,8 +137,18 @@ class VOD:
         video_url = video_url.strip()
 
         if re.search(r'\.(mp4|m3u8|ts|mpegurl)(\?|#|$)', video_url, re.I):
-            if any(d in video_url.lower() for d in ["cnvsplus.com", "streamcnvs.com", "cdn", "watchingvs.com"]):
-                return f"{video_url}|User-Agent={quote_plus(headers['User-Agent'])}&Referer={quote_plus(self.base)}&Origin={quote_plus(self.base)}".strip("&")
+            if any(d in video_url.lower() for d in [
+                "cnvsplus.com",
+                "streamcnvs.com",
+                "cdn",
+                "watchingvs.com"
+            ]):
+                return (
+                    f"{video_url}"
+                    f"|User-Agent={quote_plus(headers['User-Agent'])}"
+                    f"&Referer={quote_plus(self.base)}"
+                    f"&Origin={quote_plus(self.base)}"
+                )
 
         if "streamcnvs.com" in video_url:
             return f"{video_url}|User-Agent={quote_plus(headers['User-Agent'])}"
@@ -96,7 +159,12 @@ class VOD:
             origin = f"{parsed.scheme}://{parsed.netloc}"
             player = f"{origin}/player/index.php?data={video_hash}&do=getVideo"
 
-            r = requests.get(video_url, headers={**headers, 'sec-fetch-dest': 'iframe'}, timeout=15)
+            r = requests.get(
+                video_url,
+                headers={**headers, 'sec-fetch-dest': 'iframe'},
+                timeout=15
+            )
+
             cookies = r.cookies.get_dict()
             cookie_str = urlencode(cookies)
 
@@ -112,11 +180,16 @@ class VOD:
                 cookies=cookies,
                 timeout=15
             )
+
             js = r.json()
             if js.get("videoSource"):
-                return f"{js['videoSource']}|User-Agent={quote_plus(headers['User-Agent'])}&Cookie={quote_plus(cookie_str)}&Referer={quote_plus(origin)}"
+                return (
+                    f"{js['videoSource']}"
+                    f"|User-Agent={quote_plus(headers['User-Agent'])}"
+                    f"&Cookie={quote_plus(cookie_str)}"
+                    f"&Referer={quote_plus(origin)}"
+                )
         except:
             pass
 
         return ''
-

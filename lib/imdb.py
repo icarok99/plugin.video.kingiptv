@@ -90,7 +90,7 @@ class IMDBScraper:
         itens = []
         try:
             query = quote(search)
-            url = f'{self.base}/find/?q={query}&s=tt&ttype=ft'
+            url = f'{self.base}/find/?q={query}&s=tt&ttype=movie'
             response = cfscraper.get(url, headers=self.headers)
 
             if response.status_code != 200:
@@ -228,3 +228,4 @@ class IMDBScraper:
             pass
 
         return itens
+

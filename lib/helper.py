@@ -435,13 +435,14 @@ def end():
     xbmcplugin.endOfDirectory(handle)
 
 def setview(name):
-    mode = {'Wall': '500',
-            'List': '50',
-            'Poster': '51',
-            'Shift': '53',
-            'InfoWall': '54',
-            'WideList': '55',
-            'Fanart': '502'
-            }.get(name, '50')
-    view = 'Container.SetViewMode(%s)'%mode
-    xbmc.executebuiltin(view)   
+    views = {
+        'List': 'list',
+        'Poster': 'poster',
+        'Shift': 'shift',
+        'InfoWall': 'infowall',
+        'WideList': 'widelist',
+        'Wall': 'wall',
+        'Fanart': 'fanart'
+    }
+    view_name = views.get(name, 'list')
+    xbmc.executebuiltin(f'SetViewMode({view_name})')

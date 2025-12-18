@@ -72,10 +72,8 @@ class VOD:
             if not options:
                 return ''
 
-            if len(options) > 1:
-                video_id = options[1]['ID']
-            else:
-                video_id = options[0]['ID']
+            # Tenta primeiro o último servidor (fast ou servidor 3/alternativo)
+            video_id = options[-1]['ID']
 
             r = requests.post(
                 api,
@@ -86,10 +84,26 @@ class VOD:
 
             video_url = r.json().get('data', {}).get('video_url', '').strip()
 
-            if not video_url:
-                return ''
+            if video_url:
+                return self._resolve_video_url(video_url, url)
 
-            return self._resolve_video_url(video_url, url)
+            # Se o último não tiver vídeo, tenta o Premium (primeira opção) como fallback
+            if len(options) > 1:
+                video_id = options[0]['ID']
+
+                r = requests.post(
+                    api,
+                    data={'action': 'getPlayer', 'video_id': video_id},
+                    headers=h,
+                    timeout=15
+                )
+
+                video_url = r.json().get('data', {}).get('video_url', '').strip()
+
+                if video_url:
+                    return self._resolve_video_url(video_url, url)
+
+            return ''
 
         except Exception:
             return ''
@@ -145,25 +159,21 @@ class VOD:
         except Exception:
             return ''
 
+    def _strip_subtitle(self, video_url):
+        if '?s=' in video_url:
+            video_url = video_url.split('?s=', 1)[0]
+        return video_url.strip()
+
     def _resolve_video_url(self, video_url, referer_url):
-        video_url = video_url.strip()
+        video_url = self._strip_subtitle(video_url)
 
         if re.search(r'\.(mp4|m3u8|ts|mpegurl)(\?|#|$)', video_url, re.I):
-            if any(d in video_url.lower() for d in [
-                "cnvsplus.com",
-                "streamcnvs.com",
-                "cdn",
-                "watchingvs.com"
-            ]):
-                return (
-                    f"{video_url}"
-                    f"|User-Agent={quote_plus(headers['User-Agent'])}"
-                    f"&Referer={quote_plus(self.base)}"
-                    f"&Origin={quote_plus(self.base)}"
-                )
-
-        if "streamcnvs.com" in video_url:
-            return f"{video_url}|User-Agent={quote_plus(headers['User-Agent'])}"
+            return (
+                f"{video_url}"
+                f"|User-Agent={quote_plus(headers['User-Agent'])}"
+                f"&Referer={quote_plus(self.base)}"
+                f"&Origin={quote_plus(self.base)}"
+            )
 
         try:
             video_hash = video_url.strip("/").split("/")[-1]
@@ -201,6 +211,7 @@ class VOD:
                     f"&Cookie={quote_plus(urlencode(cookies))}"
                     f"&Referer={quote_plus(origin)}"
                 )
+
         except Exception:
             pass
 

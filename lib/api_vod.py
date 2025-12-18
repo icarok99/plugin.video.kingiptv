@@ -71,20 +71,15 @@ class VOD:
             if not options:
                 return ''
 
-            fast = []
-            premium = []
-            others = []
-
-            for opt in options:
+            def server_priority(opt):
                 name = opt.get('name', '').lower()
                 if 'fast' in name:
-                    fast.append(opt)
-                elif 'premium' in name:
-                    premium.append(opt)
-                else:
-                    others.append(opt)
+                    return 0
+                if 'premium' in name:
+                    return 1
+                return 2
 
-            options = fast + premium + others
+            options.sort(key=server_priority)
 
             for opt in options:
                 video_id = opt.get('ID')

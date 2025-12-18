@@ -71,17 +71,14 @@ class VOD:
             if not options:
                 return ''
 
-            def server_priority(opt):
-                name = opt.get('name', '').lower()
-                if 'fast' in name:
-                    return 0
-                if 'premium' in name:
-                    return 1
-                return 2
+            ordered = []
+            if len(options) > 1:
+                ordered.append(options[1])  # FAST
+            ordered.append(options[0])      # PREMIUM
+            if len(options) > 2:
+                ordered.extend(options[2:]) # OUTROS
 
-            options.sort(key=server_priority)
-
-            for opt in options:
+            for opt in ordered:
                 video_id = opt.get('ID')
                 if not video_id:
                     continue
@@ -177,6 +174,18 @@ class VOD:
         video_url = self._strip_subtitle(video_url)
 
         if re.search(r'\.(mp4|m3u8|ts|mpegurl)(\?|#|$)', video_url, re.I):
+            try:
+                test = requests.head(
+                    video_url,
+                    headers=headers,
+                    timeout=5,
+                    allow_redirects=True
+                )
+                if test.status_code >= 400:
+                    return ''
+            except Exception:
+                return ''
+
             return (
                 f"{video_url}"
                 f"|User-Agent={quote_plus(headers['User-Agent'])}"

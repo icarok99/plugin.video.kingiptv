@@ -72,30 +72,24 @@ class VOD:
             if not options:
                 return ''
 
-            for opt in options:
-                try:
-                    video_id = opt['ID']
+            if len(options) > 1:
+                video_id = options[1]['ID']
+            else:
+                video_id = options[0]['ID']
 
-                    r_player = requests.post(
-                        api,
-                        data={'action': 'getPlayer', 'video_id': video_id},
-                        headers=h,
-                        timeout=15
-                    )
+            r = requests.post(
+                api,
+                data={'action': 'getPlayer', 'video_id': video_id},
+                headers=h,
+                timeout=15
+            )
 
-                    video_url = r_player.json().get('data', {}).get('video_url', '').strip()
+            video_url = r.json().get('data', {}).get('video_url', '').strip()
 
-                    if not video_url:
-                        continue
+            if not video_url:
+                return ''
 
-                    resolved = self._resolve_video_url(video_url, url)
-                    if resolved:
-                        return resolved
-
-                except Exception:
-                    continue
-
-            return ''
+            return self._resolve_video_url(video_url, url)
 
         except Exception:
             return ''
@@ -123,44 +117,30 @@ class VOD:
                 'referer': url
             }
 
-            def get_priority(btn):
-                text = btn.get_text(strip=True).lower()
-                if any(f in text for f in ['fast', 'fast 2', 'fast 3']):
-                    return 0
-                if 'premium' in text:
-                    return 1
-                if 'servidor 3' in text:
-                    return 2
-                return 3
+            fast_id = next(
+                (
+                    b.get('data-id')
+                    for b in btns
+                    if any(x in b.get_text(strip=True).lower() for x in ['fast', 'fast 2', 'fast 3'])
+                ),
+                None
+            )
 
-            priority_btns = sorted(btns, key=get_priority)
+            video_id = fast_id or btns[0].get('data-id')
 
-            for b in priority_btns:
-                try:
-                    video_id = b.get('data-id')
-                    if not video_id:
-                        continue
+            r = requests.post(
+                api,
+                data={'action': 'getPlayer', 'video_id': video_id},
+                headers=h,
+                timeout=15
+            )
 
-                    r = requests.post(
-                        api,
-                        data={'action': 'getPlayer', 'video_id': video_id},
-                        headers=h,
-                        timeout=15
-                    )
+            video_url = r.json().get('data', {}).get('video_url', '').strip()
 
-                    video_url = r.json().get('data', {}).get('video_url', '').strip()
+            if not video_url:
+                return ''
 
-                    if not video_url:
-                        continue
-
-                    resolved = self._resolve_video_url(video_url, url)
-                    if resolved:
-                        return resolved
-
-                except Exception:
-                    continue
-
-            return ''
+            return self._resolve_video_url(video_url, url)
 
         except Exception:
             return ''

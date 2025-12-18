@@ -11,18 +11,25 @@ headers = {
 
 class VOD:
     def __init__(self):
-        self.base = self._resolve_base('https://superflixapi.asia')
+        original_base = 'https://superflixapi.asia'
+        self.base = self.get_last_base(original_base)
 
-    def _resolve_base(self, url):
+    def get_last_base(self, url):
+        last_url = url
         try:
-            r = requests.get(url, headers=headers, timeout=8, allow_redirects=True)
-            return r.url.rstrip("/")
-        except:
-            return url.rstrip("/")
+            r = requests.get(url, headers=headers, timeout=4)
+            last_url = r.url
+        except Exception:
+            pass
+
+        if last_url and last_url.endswith('/'):
+            last_url = last_url[:-1]
+        return last_url
 
     def tvshows(self, imdb, season, episode):
         try:
             url = f'{self.base}/serie/{imdb}/{season}/{episode}'
+
             r = requests.get(
                 url,
                 headers={**headers, 'sec-fetch-dest': 'iframe'},
@@ -61,11 +68,12 @@ class VOD:
             )
 
             options = r.json().get('data', {}).get('options', [])
+
             if not options:
                 return ''
 
             if len(options) > 1:
-                video_id = options[1]['ID']  # FAST
+                video_id = options[1]['ID']
             else:
                 video_id = options[0]['ID']
 
@@ -77,17 +85,19 @@ class VOD:
             )
 
             video_url = r.json().get('data', {}).get('video_url', '').strip()
+
             if not video_url:
                 return ''
 
             return self._resolve_video_url(video_url, url)
 
-        except:
+        except Exception:
             return ''
 
     def movie(self, imdb):
         try:
             url = f'{self.base}/filme/{imdb}'
+
             r = requests.get(
                 url,
                 headers={**headers, 'sec-fetch-dest': 'iframe'},
@@ -96,6 +106,7 @@ class VOD:
 
             soup = BeautifulSoup(r.text, "html.parser")
             btns = soup.find_all("div", class_="btn-server")
+
             if not btns:
                 return ''
 
@@ -125,12 +136,13 @@ class VOD:
             )
 
             video_url = r.json().get('data', {}).get('video_url', '').strip()
+
             if not video_url:
                 return ''
 
             return self._resolve_video_url(video_url, url)
 
-        except:
+        except Exception:
             return ''
 
     def _resolve_video_url(self, video_url, referer_url):
@@ -166,7 +178,6 @@ class VOD:
             )
 
             cookies = r.cookies.get_dict()
-            cookie_str = urlencode(cookies)
 
             r = requests.post(
                 player,
@@ -182,14 +193,15 @@ class VOD:
             )
 
             js = r.json()
+
             if js.get("videoSource"):
                 return (
                     f"{js['videoSource']}"
                     f"|User-Agent={quote_plus(headers['User-Agent'])}"
-                    f"&Cookie={quote_plus(cookie_str)}"
+                    f"&Cookie={quote_plus(urlencode(cookies))}"
                     f"&Referer={quote_plus(origin)}"
                 )
-        except:
+        except Exception:
             pass
 
         return ''

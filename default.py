@@ -353,8 +353,27 @@ def play_resolve_movies(param):
     if url:
         notify('Escolha o audio portugues nos ajustes')
         stream_url = url.split('|')[0] if '|' in url else url
+        
+        is_mp4 = stream_url.lower().endswith('.mp4')  # Detecção explícita de MP4
+
         play_item = xbmcgui.ListItem(path=stream_url)
         play_item.setArt({'thumb': iconimage, 'icon': iconimage, 'fanart': iconimage})
+        play_item.setContentLookup(False)
+
+        if is_mp4:
+            play_item.setProperty('inputstream', 'inputstream.ffmpegdirect')
+            play_item.setProperty('inputstream.ffmpegdirect.manifest_type', 'mp4')  # Opcional, mas bom
+            play_item.setMimeType('video/mp4')
+        else:
+            # Tudo o mais (HLS, TS, etc.) tratado como HLS com adaptive
+            play_item.setProperty('inputstream', 'inputstream.adaptive')
+            play_item.setProperty('inputstream.adaptive.manifest_type', 'hls')
+            play_item.setProperty('inputstream.adaptive.original_audio_language', 'pt')
+
+        if '|' in url:
+            header = url.split('|', 1)[1]
+            play_item.setProperty('inputstream.adaptive.stream_headers', header)
+            play_item.setProperty('inputstream.ffmpegdirect.stream_headers', header)
 
         info_tag = play_item.getVideoInfoTag()
         info_tag.setTitle(name)
@@ -367,6 +386,7 @@ def play_resolve_movies(param):
         xbmc.Player().play(item=stream_url, listitem=play_item)
     else:
         notify('Stream Indisponivel')
+
 
 @route('/play_resolve_series')
 def play_resolve_series(param):
@@ -384,10 +404,29 @@ def play_resolve_series(param):
     if url:
         notify('Escolha o audio portugues nos ajustes')
         stream_url = url.split('|')[0] if '|' in url else url
+        
+        is_mp4 = stream_url.lower().endswith('.mp4')
+
         display_title = episode_title if episode_title else f'S{season}E{episode.zfill(2)}'
         
         play_item = xbmcgui.ListItem(path=stream_url)
         play_item.setArt({'thumb': iconimage, 'icon': iconimage, 'fanart': fanart or iconimage})
+        play_item.setContentLookup(False)
+
+        if is_mp4:
+            play_item.setProperty('inputstream', 'inputstream.ffmpegdirect')
+            play_item.setProperty('inputstream.ffmpegdirect.stream_mode', 'ffmpeg')
+            play_item.setProperty('inputstream.ffmpegdirect.manifest_type', 'mp4')
+            play_item.setMimeType('video/mp4')
+        else:
+            play_item.setProperty('inputstream', 'inputstream.adaptive')
+            play_item.setProperty('inputstream.adaptive.manifest_type', 'hls')
+            play_item.setProperty('inputstream.adaptive.original_audio_language', 'pt')
+
+        if '|' in url:
+            header = url.split('|', 1)[1]
+            play_item.setProperty('inputstream.adaptive.stream_headers', header)
+            play_item.setProperty('inputstream.ffmpegdirect.stream_headers', header)
 
         info_tag = play_item.getVideoInfoTag()
         info_tag.setTitle(display_title)

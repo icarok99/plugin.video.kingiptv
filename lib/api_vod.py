@@ -68,28 +68,23 @@ class VOD:
             )
 
             options = r.json().get('data', {}).get('options', [])
-
             if not options:
                 return ''
 
-            # Tenta primeiro o último servidor (fast ou servidor 3/alternativo)
-            video_id = options[-1]['ID']
+            def server_priority(opt):
+                name = opt.get('name', '').lower()
+                if 'fast' in name:
+                    return 0
+                if 'premium' in name:
+                    return 1
+                return 2
 
-            r = requests.post(
-                api,
-                data={'action': 'getPlayer', 'video_id': video_id},
-                headers=h,
-                timeout=15
-            )
+            options.sort(key=server_priority)
 
-            video_url = r.json().get('data', {}).get('video_url', '').strip()
-
-            if video_url:
-                return self._resolve_video_url(video_url, url)
-
-            # Se o último não tiver vídeo, tenta o Premium (primeira opção) como fallback
-            if len(options) > 1:
-                video_id = options[0]['ID']
+            for opt in options:
+                video_id = opt.get('ID')
+                if not video_id:
+                    continue
 
                 r = requests.post(
                     api,
@@ -99,9 +94,12 @@ class VOD:
                 )
 
                 video_url = r.json().get('data', {}).get('video_url', '').strip()
+                if not video_url:
+                    continue
 
-                if video_url:
-                    return self._resolve_video_url(video_url, url)
+                resolved = self._resolve_video_url(video_url, url)
+                if resolved:
+                    return resolved
 
             return ''
 
@@ -120,9 +118,18 @@ class VOD:
 
             soup = BeautifulSoup(r.text, "html.parser")
             btns = soup.find_all("div", class_="btn-server")
-
             if not btns:
                 return ''
+
+            def server_priority(btn):
+                t = btn.get_text(strip=True).lower()
+                if 'fast' in t:
+                    return 0
+                if 'premium' in t:
+                    return 1
+                return 2
+
+            btns.sort(key=server_priority)
 
             api = f"{self.base}/api"
             h = {
@@ -131,30 +138,27 @@ class VOD:
                 'referer': url
             }
 
-            fast_id = next(
-                (
-                    b.get('data-id')
-                    for b in btns
-                    if any(x in b.get_text(strip=True).lower() for x in ['fast', 'fast 2', 'fast 3'])
-                ),
-                None
-            )
+            for b in btns:
+                video_id = b.get('data-id')
+                if not video_id:
+                    continue
 
-            video_id = fast_id or btns[0].get('data-id')
+                r = requests.post(
+                    api,
+                    data={'action': 'getPlayer', 'video_id': video_id},
+                    headers=h,
+                    timeout=15
+                )
 
-            r = requests.post(
-                api,
-                data={'action': 'getPlayer', 'video_id': video_id},
-                headers=h,
-                timeout=15
-            )
+                video_url = r.json().get('data', {}).get('video_url', '').strip()
+                if not video_url:
+                    continue
 
-            video_url = r.json().get('data', {}).get('video_url', '').strip()
+                resolved = self._resolve_video_url(video_url, url)
+                if resolved:
+                    return resolved
 
-            if not video_url:
-                return ''
-
-            return self._resolve_video_url(video_url, url)
+            return ''
 
         except Exception:
             return ''
@@ -203,7 +207,6 @@ class VOD:
             )
 
             js = r.json()
-
             if js.get("videoSource"):
                 return (
                     f"{js['videoSource']}"

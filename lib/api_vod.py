@@ -71,15 +71,20 @@ class VOD:
             if not options:
                 return ''
 
-            def server_priority(opt):
+            fast = []
+            premium = []
+            others = []
+
+            for opt in options:
                 name = opt.get('name', '').lower()
                 if 'fast' in name:
-                    return 0
-                if 'premium' in name:
-                    return 1
-                return 2
+                    fast.append(opt)
+                elif 'premium' in name:
+                    premium.append(opt)
+                else:
+                    others.append(opt)
 
-            options.sort(key=server_priority)
+            options = fast + premium + others
 
             for opt in options:
                 video_id = opt.get('ID')
@@ -121,15 +126,20 @@ class VOD:
             if not btns:
                 return ''
 
-            def server_priority(btn):
-                t = btn.get_text(strip=True).lower()
-                if 'fast' in t:
-                    return 0
-                if 'premium' in t:
-                    return 1
-                return 2
+            fast = []
+            premium = []
+            others = []
 
-            btns.sort(key=server_priority)
+            for b in btns:
+                t = b.get_text(strip=True).lower()
+                if 'fast' in t:
+                    fast.append(b)
+                elif 'premium' in t:
+                    premium.append(b)
+                else:
+                    others.append(b)
+
+            btns = fast + premium + others
 
             api = f"{self.base}/api"
             h = {

@@ -72,24 +72,30 @@ class VOD:
             if not options:
                 return ''
 
-            if len(options) > 1:
-                video_id = options[1]['ID']
-            else:
-                video_id = options[0]['ID']
+            for opt in options:
+                try:
+                    video_id = opt['ID']
 
-            r = requests.post(
-                api,
-                data={'action': 'getPlayer', 'video_id': video_id},
-                headers=h,
-                timeout=15
-            )
+                    r_player = requests.post(
+                        api,
+                        data={'action': 'getPlayer', 'video_id': video_id},
+                        headers=h,
+                        timeout=15
+                    )
 
-            video_url = r.json().get('data', {}).get('video_url', '').strip()
+                    video_url = r_player.json().get('data', {}).get('video_url', '').strip()
 
-            if not video_url:
-                return ''
+                    if not video_url:
+                        continue
 
-            return self._resolve_video_url(video_url, url)
+                    resolved = self._resolve_video_url(video_url, url)
+                    if resolved:
+                        return resolved
+
+                except Exception:
+                    continue
+
+            return ''
 
         except Exception:
             return ''
@@ -117,30 +123,44 @@ class VOD:
                 'referer': url
             }
 
-            fast_id = next(
-                (
-                    b.get('data-id')
-                    for b in btns
-                    if any(x in b.get_text(strip=True).lower() for x in ['fast', 'fast 2', 'fast 3'])
-                ),
-                None
-            )
+            def get_priority(btn):
+                text = btn.get_text(strip=True).lower()
+                if any(f in text for f in ['fast', 'fast 2', 'fast 3']):
+                    return 0
+                if 'premium' in text:
+                    return 1
+                if 'servidor 3' in text:
+                    return 2
+                return 3
 
-            video_id = fast_id or btns[0].get('data-id')
+            priority_btns = sorted(btns, key=get_priority)
 
-            r = requests.post(
-                api,
-                data={'action': 'getPlayer', 'video_id': video_id},
-                headers=h,
-                timeout=15
-            )
+            for b in priority_btns:
+                try:
+                    video_id = b.get('data-id')
+                    if not video_id:
+                        continue
 
-            video_url = r.json().get('data', {}).get('video_url', '').strip()
+                    r = requests.post(
+                        api,
+                        data={'action': 'getPlayer', 'video_id': video_id},
+                        headers=h,
+                        timeout=15
+                    )
 
-            if not video_url:
-                return ''
+                    video_url = r.json().get('data', {}).get('video_url', '').strip()
 
-            return self._resolve_video_url(video_url, url)
+                    if not video_url:
+                        continue
+
+                    resolved = self._resolve_video_url(video_url, url)
+                    if resolved:
+                        return resolved
+
+                except Exception:
+                    continue
+
+            return ''
 
         except Exception:
             return ''

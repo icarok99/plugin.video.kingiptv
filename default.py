@@ -349,31 +349,34 @@ def play_resolve_movies(param):
     description = param.get('description', '')
     year = param.get('year', '')
 
-    url = api_vod.VOD().movie(imdb_number)
-    if url:
-        notify('Escolha o audio portugues nos ajustes')
-        stream_url = url.split('|')[0] if '|' in url else url
-        
-        is_mp4 = stream_url.lower().endswith('.mp4')  # Detecção explícita de MP4
+    result = api_vod.VOD().movie(imdb_number)
+    if result and result[0]:
+        stream, subtitle_url = result
 
-        play_item = xbmcgui.ListItem(path=stream_url)
+        url = stream.split('|')[0] if '|' in stream else stream
+        headers = stream.split('|', 1)[1] if '|' in stream else ''
+
+        force_as_mp4 = url.lower().endswith(('.mp4', '.str'))
+
+        play_item = xbmcgui.ListItem(path=url)
         play_item.setArt({'thumb': iconimage, 'icon': iconimage, 'fanart': iconimage})
         play_item.setContentLookup(False)
 
-        if is_mp4:
+        if subtitle_url:
+            play_item.setSubtitles([subtitle_url])
+
+        if force_as_mp4:
             play_item.setProperty('inputstream', 'inputstream.ffmpegdirect')
-            play_item.setProperty('inputstream.ffmpegdirect.manifest_type', 'mp4')  # Opcional, mas bom
+            play_item.setProperty('inputstream.ffmpegdirect.manifest_type', 'mp4')
             play_item.setMimeType('video/mp4')
         else:
-            # Tudo o mais (HLS, TS, etc.) tratado como HLS com adaptive
             play_item.setProperty('inputstream', 'inputstream.adaptive')
             play_item.setProperty('inputstream.adaptive.manifest_type', 'hls')
             play_item.setProperty('inputstream.adaptive.original_audio_language', 'pt')
 
-        if '|' in url:
-            header = url.split('|', 1)[1]
-            play_item.setProperty('inputstream.adaptive.stream_headers', header)
-            play_item.setProperty('inputstream.ffmpegdirect.stream_headers', header)
+        if headers:
+            play_item.setProperty('inputstream.adaptive.stream_headers', headers)
+            play_item.setProperty('inputstream.ffmpegdirect.stream_headers', headers)
 
         info_tag = play_item.getVideoInfoTag()
         info_tag.setTitle(name)
@@ -383,7 +386,7 @@ def play_resolve_movies(param):
         if year:
             info_tag.setYear(int(year))
 
-        xbmc.Player().play(item=stream_url, listitem=play_item)
+        xbmc.Player().play(item=url, listitem=play_item)
     else:
         notify('Stream Indisponivel')
 
@@ -400,22 +403,26 @@ def play_resolve_series(param):
     imdb_number = param.get('imdbnumber', '')
     description = param.get('description', '')
 
-    url = api_vod.VOD().tvshows(imdb_number, season, episode)
-    if url:
-        notify('Escolha o audio portugues nos ajustes')
-        stream_url = url.split('|')[0] if '|' in url else url
-        
-        is_mp4 = stream_url.lower().endswith('.mp4')
+    result = api_vod.VOD().tvshows(imdb_number, season, episode)
+    if result and result[0]:
+        stream, subtitle_url = result
+
+        url = stream.split('|')[0] if '|' in stream else stream
+        headers = stream.split('|', 1)[1] if '|' in stream else ''
+
+        force_as_mp4 = url.lower().endswith(('.mp4', '.str'))
 
         display_title = episode_title if episode_title else f'S{season}E{episode.zfill(2)}'
-        
-        play_item = xbmcgui.ListItem(path=stream_url)
+
+        play_item = xbmcgui.ListItem(path=url)
         play_item.setArt({'thumb': iconimage, 'icon': iconimage, 'fanart': fanart or iconimage})
         play_item.setContentLookup(False)
 
-        if is_mp4:
+        if subtitle_url:
+            play_item.setSubtitles([subtitle_url])
+
+        if force_as_mp4:
             play_item.setProperty('inputstream', 'inputstream.ffmpegdirect')
-            play_item.setProperty('inputstream.ffmpegdirect.stream_mode', 'ffmpeg')
             play_item.setProperty('inputstream.ffmpegdirect.manifest_type', 'mp4')
             play_item.setMimeType('video/mp4')
         else:
@@ -423,10 +430,9 @@ def play_resolve_series(param):
             play_item.setProperty('inputstream.adaptive.manifest_type', 'hls')
             play_item.setProperty('inputstream.adaptive.original_audio_language', 'pt')
 
-        if '|' in url:
-            header = url.split('|', 1)[1]
-            play_item.setProperty('inputstream.adaptive.stream_headers', header)
-            play_item.setProperty('inputstream.ffmpegdirect.stream_headers', header)
+        if headers:
+            play_item.setProperty('inputstream.adaptive.stream_headers', headers)
+            play_item.setProperty('inputstream.ffmpegdirect.stream_headers', headers)
 
         info_tag = play_item.getVideoInfoTag()
         info_tag.setTitle(display_title)

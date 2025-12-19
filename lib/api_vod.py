@@ -38,7 +38,7 @@ class VOD:
 
             match = re.search(r'var ALL_EPISODES\s*=\s*({.*?});', r.text, re.DOTALL)
             if not match:
-                return ''
+                return '', None
 
             episodes = json.loads(match.group(1))
             contentid = next(
@@ -51,7 +51,7 @@ class VOD:
             )
 
             if not contentid:
-                return ''
+                return '', None
 
             api = f"{self.base}/api"
             h = {
@@ -69,14 +69,14 @@ class VOD:
 
             options = r.json().get('data', {}).get('options', [])
             if not options:
-                return ''
+                return '', None
 
             ordered = []
             if len(options) > 1:
-                ordered.append(options[1])  # FAST
-            ordered.append(options[0])      # PREMIUM
+                ordered.append(options[1])
+            ordered.append(options[0])
             if len(options) > 2:
-                ordered.extend(options[2:]) # OUTROS
+                ordered.extend(options[2:])
 
             for opt in ordered:
                 video_id = opt.get('ID')
@@ -94,14 +94,14 @@ class VOD:
                 if not video_url:
                     continue
 
-                resolved = self._resolve_video_url(video_url, url)
-                if resolved:
-                    return resolved
+                resolved_video, resolved_sub = self._resolve_video_url(video_url, url)
+                if resolved_video:
+                    return resolved_video, resolved_sub
 
-            return ''
+            return '', None
 
         except Exception:
-            return ''
+            return '', None
 
     def movie(self, imdb):
         try:
@@ -116,11 +116,9 @@ class VOD:
             soup = BeautifulSoup(r.text, "html.parser")
             btns = soup.find_all("div", class_="btn-server")
             if not btns:
-                return ''
+                return '', None
 
-            fast = []
-            premium = []
-            others = []
+            fast, premium, others = [], [], []
 
             for b in btns:
                 t = b.get_text(strip=True).lower()
@@ -156,24 +154,25 @@ class VOD:
                 if not video_url:
                     continue
 
-                resolved = self._resolve_video_url(video_url, url)
-                if resolved:
-                    return resolved
+                resolved_video, resolved_sub = self._resolve_video_url(video_url, url)
+                if resolved_video:
+                    return resolved_video, resolved_sub
 
-            return ''
+            return '', None
 
         except Exception:
-            return ''
+            return '', None
 
-    def _strip_subtitle(self, video_url):
+    def _extract_subtitle(self, video_url):
+        subtitle = None
         if '?s=' in video_url:
-            video_url = video_url.split('?s=', 1)[0]
-        return video_url.strip()
+            video_url, subtitle = video_url.split('?s=', 1)
+        return video_url.strip(), subtitle
 
     def _resolve_video_url(self, video_url, referer_url):
-        video_url = self._strip_subtitle(video_url)
+        video_url, subtitle = self._extract_subtitle(video_url)
 
-        if re.search(r'\.(mp4|m3u8|ts|mpegurl)(\?|#|$)', video_url, re.I):
+        if re.search(r'\.(mp4)(\?|#|$)', video_url, re.I):
             try:
                 test = requests.head(
                     video_url,
@@ -182,16 +181,17 @@ class VOD:
                     allow_redirects=True
                 )
                 if test.status_code >= 400:
-                    return ''
+                    return '', None
             except Exception:
-                return ''
+                return '', None
 
-            return (
+            play_url = (
                 f"{video_url}"
                 f"|User-Agent={quote_plus(headers['User-Agent'])}"
                 f"&Referer={quote_plus(self.base)}"
-                f"&Origin={quote_plus(self.base)}"
             )
+
+            return play_url, subtitle
 
         try:
             video_hash = video_url.strip("/").split("/")[-1]
@@ -222,14 +222,16 @@ class VOD:
 
             js = r.json()
             if js.get("videoSource"):
-                return (
+                play_url = (
                     f"{js['videoSource']}"
                     f"|User-Agent={quote_plus(headers['User-Agent'])}"
                     f"&Cookie={quote_plus(urlencode(cookies))}"
                     f"&Referer={quote_plus(origin)}"
                 )
 
+                return play_url, subtitle
+
         except Exception:
             pass
 
-        return ''
+        return '', None

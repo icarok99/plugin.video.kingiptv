@@ -20,7 +20,7 @@ try:
             with open(UPDATE_CHECK_FILE, 'r') as f:
                 return datetime.strptime(f.read().strip(), '%d-%m-%Y')
         except:
-            return datetime.strptime('26-07-2025', '%d-%m-%Y')
+            return datetime.strptime('19-12-2025', '%d-%m-%Y')
 
     def save_local_date(date_str):
         with open(UPDATE_CHECK_FILE, 'w') as f:

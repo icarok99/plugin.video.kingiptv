@@ -17,7 +17,7 @@ class VOD:
     def get_last_base(self, url):
         last_url = url
         try:
-            r = requests.get(url, headers=headers, timeout=4)
+            r = requests.get(url, headers=headers)
             last_url = r.url
         except Exception:
             pass
@@ -32,8 +32,7 @@ class VOD:
 
             r = requests.get(
                 url,
-                headers={**headers, 'sec-fetch-dest': 'iframe'},
-                timeout=15
+                headers={**headers, 'sec-fetch-dest': 'iframe'}
             )
 
             match = re.search(r'var ALL_EPISODES\s*=\s*({.*?});', r.text, re.DOTALL)
@@ -63,8 +62,7 @@ class VOD:
             r = requests.post(
                 api,
                 data={'action': 'getOptions', 'contentid': contentid},
-                headers=h,
-                timeout=15
+                headers=h
             )
 
             options = r.json().get('data', {}).get('options', [])
@@ -86,8 +84,7 @@ class VOD:
                 r = requests.post(
                     api,
                     data={'action': 'getPlayer', 'video_id': video_id},
-                    headers=h,
-                    timeout=15
+                    headers=h
                 )
 
                 video_url = r.json().get('data', {}).get('video_url', '').strip()
@@ -109,8 +106,7 @@ class VOD:
 
             r = requests.get(
                 url,
-                headers={**headers, 'sec-fetch-dest': 'iframe'},
-                timeout=15
+                headers={**headers, 'sec-fetch-dest': 'iframe'}
             )
 
             soup = BeautifulSoup(r.text, "html.parser")
@@ -146,8 +142,7 @@ class VOD:
                 r = requests.post(
                     api,
                     data={'action': 'getPlayer', 'video_id': video_id},
-                    headers=h,
-                    timeout=15
+                    headers=h
                 )
 
                 video_url = r.json().get('data', {}).get('video_url', '').strip()
@@ -172,12 +167,11 @@ class VOD:
     def _resolve_video_url(self, video_url, referer_url):
         video_url, subtitle = self._extract_subtitle(video_url)
 
-        if re.search(r'\.(mp4)(\?|#|$)', video_url, re.I):
+        if re.search(r'\.(mp4|m3u8|ts|mpegurl)(\?|#|$)', video_url, re.I):
             try:
                 test = requests.head(
                     video_url,
                     headers=headers,
-                    timeout=5,
                     allow_redirects=True
                 )
                 if test.status_code >= 400:
@@ -201,8 +195,7 @@ class VOD:
 
             r = requests.get(
                 video_url,
-                headers={**headers, 'sec-fetch-dest': 'iframe'},
-                timeout=15
+                headers={**headers, 'sec-fetch-dest': 'iframe'}
             )
 
             cookies = r.cookies.get_dict()
@@ -216,8 +209,7 @@ class VOD:
                     'User-Agent': headers['User-Agent']
                 },
                 data={'hash': video_hash, 'r': referer_url},
-                cookies=cookies,
-                timeout=15
+                cookies=cookies
             )
 
             js = r.json()

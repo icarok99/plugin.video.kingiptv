@@ -7,6 +7,15 @@ from lib import xtream, tunein, pluto, imdb, api_vod
 
 profile = xbmcvfs.translatePath('special://profile/addon_data/plugin.video.kingiptv')
 
+def stop_player():
+    try:
+        player = xbmc.Player()
+        if player.isPlaying():
+            player.stop()
+            xbmc.sleep(300)
+    except:
+        pass
+
 try:
     import github_update
     from datetime import datetime
@@ -343,6 +352,7 @@ def open_imdb_episodes(param):
 @route('/play_resolve_movies')
 def play_resolve_movies(param):
     notify('Aguarde')
+    stop_player()
     name = param.get('name', '')
     iconimage = param.get('iconimage', '')
     imdb_number = param.get('imdbnumber', '')
@@ -394,6 +404,7 @@ def play_resolve_movies(param):
 @route('/play_resolve_series')
 def play_resolve_series(param):
     notify('Aguarde')
+    stop_player()
     serie_name = param.get('serie_name', '')
     season = param.get('season_num', '')
     episode = param.get('episode_num', '')

@@ -388,13 +388,25 @@ def play_resolve_movies(param):
             play_item.setProperty('inputstream.adaptive.stream_headers', headers)
             play_item.setProperty('inputstream.ffmpegdirect.stream_headers', headers)
 
-        info_tag = play_item.getVideoInfoTag()
-        info_tag.setTitle(name)
-        info_tag.setPlot(description)
-        info_tag.setIMDBNumber(imdb_number)
-        info_tag.setMediaType('movie')
-        if year:
-            info_tag.setYear(int(year))
+        kodi_version = int(xbmc.getInfoLabel('System.BuildVersion').split('.')[0])
+        if kodi_version >= 20:
+            info_tag = play_item.getVideoInfoTag()
+            info_tag.setTitle(name)
+            info_tag.setPlot(description)
+            info_tag.setIMDBNumber(imdb_number)
+            info_tag.setMediaType('movie')
+            if year:
+                info_tag.setYear(int(year))
+        else:
+            info_dict = {
+                'title': name,
+                'plot': description,
+                'imdbnumber': imdb_number,
+                'mediatype': 'movie'
+            }
+            if year:
+                info_dict['year'] = int(year)
+            play_item.setInfo('video', info_dict)
 
         xbmc.Player().play(item=url, listitem=play_item)
     else:
@@ -445,12 +457,23 @@ def play_resolve_series(param):
             play_item.setProperty('inputstream.adaptive.stream_headers', headers)
             play_item.setProperty('inputstream.ffmpegdirect.stream_headers', headers)
 
-        info_tag = play_item.getVideoInfoTag()
-        info_tag.setTitle(display_title)
-        info_tag.setTvShowTitle(serie_name)
-        info_tag.setPlot(description)
-        info_tag.setIMDBNumber(imdb_number)
-        info_tag.setMediaType('episode')
+        kodi_version = int(xbmc.getInfoLabel('System.BuildVersion').split('.')[0])
+        if kodi_version >= 20:
+            info_tag = play_item.getVideoInfoTag()
+            info_tag.setTitle(display_title)
+            info_tag.setTvShowTitle(serie_name)
+            info_tag.setPlot(description)
+            info_tag.setIMDBNumber(imdb_number)
+            info_tag.setMediaType('episode')
+        else:
+            info_dict = {
+                'title': display_title,
+                'tvshowtitle': serie_name,
+                'plot': description,
+                'imdbnumber': imdb_number,
+                'mediatype': 'episode'
+            }
+            play_item.setInfo('video', info_dict)
 
         xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, play_item)
     else:

@@ -402,6 +402,7 @@ def play_resolve_movies(param):
                 info_dict['year'] = int(year)
             play_item.setInfo('video', info_dict)
 
+        notify('Escolha o audio portugues nos ajustes')
         xbmc.Player().play(item=full_url, listitem=play_item)
     else:
         notify('Stream Indisponivel')
@@ -463,6 +464,7 @@ def play_resolve_series(param):
             }
             play_item.setInfo('video', info_dict)
 
+        notify('Escolha o audio portugues nos ajustes')
         xbmc.Player().play(item=full_url, listitem=play_item)
     else:
         notify('Stream Indisponivel')

@@ -366,27 +366,21 @@ def play_resolve_movies(param):
         url = stream.split('|')[0] if '|' in stream else stream
         headers = stream.split('|', 1)[1] if '|' in stream else ''
 
-        force_as_mp4 = url.lower().endswith(('.mp4', '.str'))
+        full_url = url
+        if headers:
+            full_url += '|' + headers
 
-        play_item = xbmcgui.ListItem(path=url)
+        play_item = xbmcgui.ListItem(path=full_url)
         play_item.setArt({'thumb': iconimage, 'icon': iconimage, 'fanart': iconimage})
         play_item.setContentLookup(False)
 
         if subtitle_url:
             play_item.setSubtitles([subtitle_url])
 
-        if force_as_mp4:
-            play_item.setProperty('inputstream', 'inputstream.ffmpegdirect')
-            play_item.setProperty('inputstream.ffmpegdirect.manifest_type', 'mp4')
+        if url.lower().endswith(('.m3u8', '.hls')) or '.m3u8?' in url.lower():
+            play_item.setMimeType('application/vnd.apple.mpegurl')
+        elif url.lower().endswith(('.mp4', '.ts', '.mkv', '.avi')):
             play_item.setMimeType('video/mp4')
-        else:
-            play_item.setProperty('inputstream', 'inputstream.adaptive')
-            play_item.setProperty('inputstream.adaptive.manifest_type', 'hls')
-            play_item.setProperty('inputstream.adaptive.original_audio_language', 'pt')
-
-        if headers:
-            play_item.setProperty('inputstream.adaptive.stream_headers', headers)
-            play_item.setProperty('inputstream.ffmpegdirect.stream_headers', headers)
 
         kodi_version = int(xbmc.getInfoLabel('System.BuildVersion').split('.')[0])
         if kodi_version >= 20:
@@ -408,7 +402,7 @@ def play_resolve_movies(param):
                 info_dict['year'] = int(year)
             play_item.setInfo('video', info_dict)
 
-        xbmc.Player().play(item=url, listitem=play_item)
+        xbmc.Player().play(item=full_url, listitem=play_item)
     else:
         notify('Stream Indisponivel')
 
@@ -433,29 +427,23 @@ def play_resolve_series(param):
         url = stream.split('|')[0] if '|' in stream else stream
         headers = stream.split('|', 1)[1] if '|' in stream else ''
 
-        force_as_mp4 = url.lower().endswith(('.mp4', '.str'))
+        full_url = url
+        if headers:
+            full_url += '|' + headers
 
         display_title = episode_title if episode_title else f'S{season}E{episode.zfill(2)}'
 
-        play_item = xbmcgui.ListItem(path=url)
+        play_item = xbmcgui.ListItem(path=full_url)
         play_item.setArt({'thumb': iconimage, 'icon': iconimage, 'fanart': fanart or iconimage})
         play_item.setContentLookup(False)
 
         if subtitle_url:
             play_item.setSubtitles([subtitle_url])
 
-        if force_as_mp4:
-            play_item.setProperty('inputstream', 'inputstream.ffmpegdirect')
-            play_item.setProperty('inputstream.ffmpegdirect.manifest_type', 'mp4')
+        if url.lower().endswith(('.m3u8', '.hls')) or '.m3u8?' in url.lower():
+            play_item.setMimeType('application/vnd.apple.mpegurl')
+        elif url.lower().endswith(('.mp4', '.ts', '.mkv', '.avi')):
             play_item.setMimeType('video/mp4')
-        else:
-            play_item.setProperty('inputstream', 'inputstream.adaptive')
-            play_item.setProperty('inputstream.adaptive.manifest_type', 'hls')
-            play_item.setProperty('inputstream.adaptive.original_audio_language', 'pt')
-
-        if headers:
-            play_item.setProperty('inputstream.adaptive.stream_headers', headers)
-            play_item.setProperty('inputstream.ffmpegdirect.stream_headers', headers)
 
         kodi_version = int(xbmc.getInfoLabel('System.BuildVersion').split('.')[0])
         if kodi_version >= 20:
@@ -475,6 +463,6 @@ def play_resolve_series(param):
             }
             play_item.setInfo('video', info_dict)
 
-        xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, play_item)
+        xbmc.Player().play(item=full_url, listitem=play_item)
     else:
         notify('Stream Indisponivel')

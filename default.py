@@ -465,6 +465,6 @@ def play_resolve_series(param):
             play_item.setInfo('video', info_dict)
 
         notify('Escolha o audio portugues nos ajustes')
-        xbmc.Player().play(item=full_url, listitem=play_item)
+        xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, play_item)
     else:
         notify('Stream Indisponivel')

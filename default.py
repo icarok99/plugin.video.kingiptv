@@ -366,21 +366,26 @@ def play_resolve_movies(param):
         url = stream.split('|')[0] if '|' in stream else stream
         headers = stream.split('|', 1)[1] if '|' in stream else ''
 
-        full_url = url
-        if headers:
-            full_url += '|' + headers
+        is_direct_file = url.lower().endswith(('.mp4', '.mkv', '.avi', '.mov', '.webm', '.ts'))
 
-        play_item = xbmcgui.ListItem(path=full_url)
+        play_item = xbmcgui.ListItem(path=url)
         play_item.setArt({'thumb': iconimage, 'icon': iconimage, 'fanart': iconimage})
         play_item.setContentLookup(False)
 
         if subtitle_url:
             play_item.setSubtitles([subtitle_url])
 
-        if url.lower().endswith(('.m3u8', '.hls')) or '.m3u8?' in url.lower():
-            play_item.setMimeType('application/vnd.apple.mpegurl')
-        elif url.lower().endswith(('.mp4', '.ts', '.mkv', '.avi')):
+        if is_direct_file:
             play_item.setMimeType('video/mp4')
+            if headers:
+                url_with_headers = f"{url}|{headers}&User-Agent=Mozilla/5.0&Referer=https://google.com"
+                play_item = xbmcgui.ListItem(path=url_with_headers)
+        else:
+            play_item.setProperty('inputstream', 'inputstream.adaptive')
+            play_item.setProperty('inputstream.adaptive.manifest_type', 'hls')
+            play_item.setProperty('inputstream.adaptive.original_audio_language', 'pt')
+            if headers:
+                play_item.setProperty('inputstream.adaptive.stream_headers', headers)
 
         kodi_version = int(xbmc.getInfoLabel('System.BuildVersion').split('.')[0])
         if kodi_version >= 20:
@@ -403,10 +408,9 @@ def play_resolve_movies(param):
             play_item.setInfo('video', info_dict)
 
         notify('Escolha o audio portugues nos ajustes')
-        xbmc.Player().play(item=full_url, listitem=play_item)
+        xbmc.Player().play(item=url, listitem=play_item)
     else:
         notify('Stream Indisponivel')
-
 
 @route('/play_resolve_series')
 def play_resolve_series(param):
@@ -428,23 +432,28 @@ def play_resolve_series(param):
         url = stream.split('|')[0] if '|' in stream else stream
         headers = stream.split('|', 1)[1] if '|' in stream else ''
 
-        full_url = url
-        if headers:
-            full_url += '|' + headers
+        is_direct_file = url.lower().endswith(('.mp4', '.mkv', '.avi', '.mov', '.webm', '.ts'))
 
         display_title = episode_title if episode_title else f'S{season}E{episode.zfill(2)}'
 
-        play_item = xbmcgui.ListItem(path=full_url)
+        play_item = xbmcgui.ListItem(path=url)
         play_item.setArt({'thumb': iconimage, 'icon': iconimage, 'fanart': fanart or iconimage})
         play_item.setContentLookup(False)
 
         if subtitle_url:
             play_item.setSubtitles([subtitle_url])
 
-        if url.lower().endswith(('.m3u8', '.hls')) or '.m3u8?' in url.lower():
-            play_item.setMimeType('application/vnd.apple.mpegurl')
-        elif url.lower().endswith(('.mp4', '.ts', '.mkv', '.avi')):
+        if is_direct_file:
             play_item.setMimeType('video/mp4')
+            if headers:
+                url_with_headers = f"{url}|{headers}&User-Agent=Mozilla/5.0&Referer=https://google.com"
+                play_item = xbmcgui.ListItem(path=url_with_headers)
+        else:
+            play_item.setProperty('inputstream', 'inputstream.adaptive')
+            play_item.setProperty('inputstream.adaptive.manifest_type', 'hls')
+            play_item.setProperty('inputstream.adaptive.original_audio_language', 'pt')
+            if headers:
+                play_item.setProperty('inputstream.adaptive.stream_headers', headers)
 
         kodi_version = int(xbmc.getInfoLabel('System.BuildVersion').split('.')[0])
         if kodi_version >= 20:

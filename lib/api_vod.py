@@ -70,9 +70,10 @@ class VOD:
                 return '', None
 
             ordered = []
+            if len(options) > 0:
+                ordered.append(options[0])
             if len(options) > 1:
                 ordered.append(options[1])
-            ordered.append(options[0])
             if len(options) > 2:
                 ordered.extend(options[2:])
 
@@ -114,18 +115,18 @@ class VOD:
             if not btns:
                 return '', None
 
-            fast, premium, others = [], [], []
+            premium, fast, others = [], [], []
 
             for b in btns:
                 t = b.get_text(strip=True).lower()
-                if 'fast' in t:
-                    fast.append(b)
-                elif 'premium' in t:
+                if 'premium' in t:
                     premium.append(b)
+                elif 'fast' in t:
+                    fast.append(b)
                 else:
                     others.append(b)
 
-            btns = fast + premium + others
+            btns = premium + fast + others
 
             api = f"{self.base}/api"
             h = {

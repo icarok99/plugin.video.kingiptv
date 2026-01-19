@@ -6,14 +6,9 @@ from urllib.parse import quote
 from bs4 import BeautifulSoup
 
 try:
-    from lib.ClientScraper import cfscraper
-except ImportError:
-    from ClientScraper import cfscraper
-
-try:
-    from lib.helper import *
+    from lib.helper import requests
 except:
-    from helper import *
+    from helper import requests
 
 
 def resize_poster(url, size='V1_QL100_UX1920'):
@@ -48,7 +43,7 @@ class IMDBScraper:
         try:
             query = quote(search)
             url = f'{self.base}/find/?q={query}&s=tt&ttype=tv'
-            response = cfscraper.get(url, headers=self.headers)
+            response = requests.get(url, headers=self.headers)
 
             if response.status_code != 200:
                 return itens
@@ -91,7 +86,7 @@ class IMDBScraper:
         try:
             query = quote(search)
             url = f'{self.base}/find/?q={query}&s=tt&ttype=movie'
-            response = cfscraper.get(url, headers=self.headers)
+            response = requests.get(url, headers=self.headers)
 
             if response.status_code != 200:
                 return itens
@@ -145,7 +140,8 @@ class IMDBScraper:
         itens = []
         try:
             url = self.base + chart_path
-            html_text = cfscraper.get(url, headers=self.headers).text
+            response = requests.get(url, headers=self.headers)
+            html_text = response.text
             json_match = re.search(r'<script type="application/ld\+json">(.+?)</script>',
                                    html_text, re.DOTALL)
             if not json_match:
@@ -180,7 +176,8 @@ class IMDBScraper:
     def imdb_seasons(self, url):
         itens = []
         try:
-            html_text = cfscraper.get(url, headers=self.headers).text
+            response = requests.get(url, headers=self.headers)
+            html_text = response.text
             data = self._extract_next_data(html_text)
             if not data:
                 return itens
@@ -203,7 +200,8 @@ class IMDBScraper:
     def imdb_episodes(self, url):
         itens = []
         try:
-            html_text = cfscraper.get(url, headers=self.headers).text
+            response = requests.get(url, headers=self.headers)
+            html_text = response.text
             data = self._extract_next_data(html_text)
             if not data:
                 return itens
@@ -228,4 +226,3 @@ class IMDBScraper:
             pass
 
         return itens
-

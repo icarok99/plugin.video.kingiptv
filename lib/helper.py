@@ -112,24 +112,31 @@ def yesno(heading="",message="",nolabel="Nao",yeslabel="Sim"):
 
 def route(r):
     try:
-        route_decorator = r.split('/')[1] # function name from route
-        plugin_route = base.split('/')[3:] # command from sys
-        route_sys = plugin_route[0] # function name from sys
+        route_decorator = r.split('/')[1] if '/' in r else r
+        
+        # Pega a rota do sys.argv
+        plugin_route = base.split('/')[3:] if len(base.split('/')) > 3 else []
+        route_sys = plugin_route[0] if plugin_route else ''
+        
         def decorator(f):
             params = {}
             try:
-                param_root = plugin_route[1] # params from sys
-                param_root = unquote_plus(param_root).split('&')
-                for command in param_root:
-                    if '=' in command:
-                        split_command = command.split('=')
-                        key = unquote_plus(split_command[0])
-                        value = unquote_plus(split_command[1])
-                        params[key] = value
-                    else:
-                        params[command] = ''
+                # Verifica se tem query string com ?
+                if len(sys.argv) > 2 and sys.argv[2]:
+                    query_string = sys.argv[2]
+                    if query_string.startswith('?'):
+                        query_string = query_string[1:]
+                    
+                    # Parse dos parâmetros
+                    for param in query_string.split('&'):
+                        if '=' in param:
+                            key, value = param.split('=', 1)
+                            params[unquote_plus(key)] = unquote_plus(value)
+                        elif param:
+                            params[param] = ''
             except:
                 pass
+            
             if not route_decorator and not route_sys:
                 try:
                     f(params)
@@ -250,8 +257,13 @@ def addMenuItem(params={}, destiny='', folder=True):
     try:
         params.update({'originaltitle': string_utf8(originaltitle)})
     except:
-        pass               
-    u = 'plugin://%s/%s/%s'%(base.split("/")[2],destiny,quote_plus(urlencode(params)))
+        pass
+    
+    # CORREÇÃO: Usar urlencode diretamente sem quote_plus adicional
+    # urlencode já faz a codificação correta
+    params_str = urlencode(params)
+    u = 'plugin://%s/%s?%s' % (base.split("/")[2], destiny, params_str)
+    
     iconimage = params.get("iconimage", "")
     fanart = params.get("fanart", "")
     codec = params.get("codec", "")

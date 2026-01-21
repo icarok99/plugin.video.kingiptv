@@ -223,8 +223,17 @@ def find_movies():
         itens = imdb.IMDBScraper().search_movies(search)
         if itens:
             setcontent('movies')
-            for name, img, page, year, imdb_id in itens:
-                addMenuItem({'name': name, 'description': '', 'iconimage': img, 'url': '', 'imdbnumber': imdb_id, 'year': year}, destiny='/play_resolve_movies', folder=False)
+            for movie_name, img, page, year, imdb_id, original_name in itens:
+                addMenuItem({
+                    'name': movie_name,
+                    'description': '',
+                    'iconimage': img,
+                    'url': '',
+                    'imdbnumber': imdb_id,
+                    'year': year,
+                    'movie_name': movie_name,
+                    'original_name': original_name
+                }, destiny='/play_resolve_movies', folder=False)
             end()
             setview('List')
 
@@ -235,8 +244,16 @@ def find_series():
         itens = imdb.IMDBScraper().search_series(search)
         if itens:
             setcontent('tvshows')
-            for name, img, page, year, imdb_id in itens:
-                addMenuItem({'name': name, 'description': '', 'iconimage': img, 'url': page, 'imdbnumber': imdb_id}, destiny='/open_imdb_seasons')
+            for serie_name, img, page, year, imdb_id, original_name in itens:
+                addMenuItem({
+                    'name': serie_name,
+                    'description': '',
+                    'iconimage': img,
+                    'url': page,
+                    'imdbnumber': imdb_id,
+                    'serie_name': serie_name,
+                    'original_name': original_name
+                }, destiny='/open_imdb_seasons')
             end()
             setview('List')
 
@@ -250,8 +267,16 @@ def movies_250(param=None):
     itens = all_items[start:end_]
     if itens:
         setcontent('movies')
-        for name, image, url, description, imdb_id in itens:
-            addMenuItem({'name': name, 'description': description, 'iconimage': image, 'url': '', 'imdbnumber': imdb_id}, destiny='/play_resolve_movies', folder=False)
+        for movie_name, image, url, description, imdb_id, original_name in itens:
+            addMenuItem({
+                'name': movie_name,
+                'description': description,
+                'iconimage': image,
+                'url': '',
+                'imdbnumber': imdb_id,
+                'movie_name': movie_name,
+                'original_name': original_name
+            }, destiny='/play_resolve_movies', folder=False)
         if end_ < len(all_items):
             addMenuItem({'name': 'Próxima Página', 'page': page + 1}, destiny='/imdb_movies_250')
         end()
@@ -267,8 +292,16 @@ def series_250(param=None):
     itens = all_items[start:end_]
     if itens:
         setcontent('tvshows')
-        for name, image, url, description, imdb_id in itens:
-            addMenuItem({'name': name, 'description': description, 'iconimage': image, 'url': url, 'imdbnumber': imdb_id}, destiny='/open_imdb_seasons')
+        for serie_name, image, url, description, imdb_id, original_name in itens:
+            addMenuItem({
+                'name': serie_name,
+                'description': description,
+                'iconimage': image,
+                'url': url,
+                'imdbnumber': imdb_id,
+                'serie_name': serie_name,
+                'original_name': original_name
+            }, destiny='/open_imdb_seasons')
         if end_ < len(all_items):
             addMenuItem({'name': 'Próxima Página', 'page': page + 1}, destiny='/imdb_series_250')
         end()
@@ -284,8 +317,16 @@ def movies_popular(param=None):
     itens = all_items[start:end_]
     if itens:
         setcontent('movies')
-        for name, image, url, description, imdb_id in itens:
-            addMenuItem({'name': name, 'description': description, 'iconimage': image, 'url': '', 'imdbnumber': imdb_id}, destiny='/play_resolve_movies', folder=False)
+        for movie_name, image, url, description, imdb_id, original_name in itens:
+            addMenuItem({
+                'name': movie_name,
+                'description': description,
+                'iconimage': image,
+                'url': '',
+                'imdbnumber': imdb_id,
+                'movie_name': movie_name,
+                'original_name': original_name
+            }, destiny='/play_resolve_movies', folder=False)
         if end_ < len(all_items):
             addMenuItem({'name': 'Próxima Página', 'page': page + 1}, destiny='/imdb_movies_popular')
         end()
@@ -301,8 +342,16 @@ def series_popular(param=None):
     itens = all_items[start:end_]
     if itens:
         setcontent('tvshows')
-        for name, image, url, description, imdb_id in itens:
-            addMenuItem({'name': name, 'description': description, 'iconimage': image, 'url': url, 'imdbnumber': imdb_id}, destiny='/open_imdb_seasons')
+        for serie_name, image, url, description, imdb_id, original_name in itens:
+            addMenuItem({
+                'name': serie_name,
+                'description': description,
+                'iconimage': image,
+                'url': url,
+                'imdbnumber': imdb_id,
+                'serie_name': serie_name,
+                'original_name': original_name
+            }, destiny='/open_imdb_seasons')
         if end_ < len(all_items):
             addMenuItem({'name': 'Próxima Página', 'page': page + 1}, destiny='/imdb_series_popular')
         end()
@@ -311,14 +360,24 @@ def series_popular(param=None):
 @route('/open_imdb_seasons')
 def open_imdb_seasons(param):
     serie_icon = param.get('iconimage', '')
-    serie_name = param.get('name', '')
+    serie_name = param.get('serie_name', param.get('name', ''))
+    original_name = param.get('original_name', '')
     url = param.get('url', '')
     imdb_id = param.get('imdbnumber', '')
     itens = imdb.IMDBScraper().imdb_seasons(url)
     if itens:
         setcontent('tvshows')
         for season_number, name, url_season in itens:
-            addMenuItem({'name': name, 'description': '', 'iconimage': serie_icon, 'url': url_season, 'imdbnumber': imdb_id, 'season': season_number, 'serie_name': serie_name}, destiny='/open_imdb_episodes')
+            addMenuItem({
+                'name': name,
+                'description': '',
+                'iconimage': serie_icon,
+                'url': url_season,
+                'imdbnumber': imdb_id,
+                'season': season_number,
+                'serie_name': serie_name,
+                'original_name': original_name
+            }, destiny='/open_imdb_episodes')
         end()
         setview('List')
 
@@ -326,6 +385,7 @@ def open_imdb_seasons(param):
 def open_imdb_episodes(param):
     serie_icon = param.get('iconimage', '')
     serie_name = param.get('serie_name', '')
+    original_name = param.get('original_name', '')
     url = param.get('url', '')
     imdb_id = param.get('imdbnumber', '')
     season = param.get('season', '')
@@ -343,6 +403,7 @@ def open_imdb_episodes(param):
                 'season_num': season,
                 'episode_num': str(episode_number),
                 'serie_name': serie_name,
+                'original_name': original_name,
                 'episode_title': name,
                 'playable': 'true'
             }, destiny='/play_resolve_series', folder=False)
@@ -353,11 +414,12 @@ def open_imdb_episodes(param):
 def play_resolve_movies(param):
     notify('Aguarde')
     stop_player()
-    name = param.get('name', '')
+    movie_name = param.get('movie_name', param.get('name', ''))
     iconimage = param.get('iconimage', '')
     imdb_number = param.get('imdbnumber', '')
     description = param.get('description', '')
     year = param.get('year', '')
+    original_name = param.get('original_name', '')
 
     result = api_vod.VOD().movie(imdb_number)
     if result and result[0]:
@@ -390,18 +452,20 @@ def play_resolve_movies(param):
         kodi_version = int(xbmc.getInfoLabel('System.BuildVersion').split('.')[0])
         if kodi_version >= 20:
             info_tag = play_item.getVideoInfoTag()
-            info_tag.setTitle(name)
+            info_tag.setTitle(movie_name)
             info_tag.setPlot(description)
             info_tag.setIMDBNumber(imdb_number)
             info_tag.setMediaType('movie')
+            info_tag.setOriginalTitle(original_name)
             if year:
                 info_tag.setYear(int(year))
         else:
             info_dict = {
-                'title': name,
+                'title': movie_name,
                 'plot': description,
                 'imdbnumber': imdb_number,
-                'mediatype': 'movie'
+                'mediatype': 'movie',
+                'originaltitle': original_name
             }
             if year:
                 info_dict['year'] = int(year)
@@ -417,6 +481,7 @@ def play_resolve_series(param):
     notify('Aguarde')
     stop_player()
     serie_name = param.get('serie_name', '')
+    original_name = param.get('original_name', '')
     season = param.get('season_num', '')
     episode = param.get('episode_num', '')
     episode_title = param.get('episode_title', '')
@@ -460,6 +525,7 @@ def play_resolve_series(param):
             info_tag = play_item.getVideoInfoTag()
             info_tag.setTitle(display_title)
             info_tag.setTvShowTitle(serie_name)
+            info_tag.setOriginalTitle(original_name)
             info_tag.setPlot(description)
             info_tag.setIMDBNumber(imdb_number)
             info_tag.setMediaType('episode')
@@ -467,6 +533,7 @@ def play_resolve_series(param):
             info_dict = {
                 'title': display_title,
                 'tvshowtitle': serie_name,
+                'originaltitle': original_name,
                 'plot': description,
                 'imdbnumber': imdb_number,
                 'mediatype': 'episode'

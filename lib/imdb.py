@@ -63,18 +63,30 @@ class IMDBScraper:
                     imdb_id = imdb_id[2:]
                 imdb_id = 'tt' + imdb_id
 
-                name = list_item.get('titleText', '').strip()
-                name = html.unescape(name)
+                title_obj = list_item.get('titleText', {})
+                if isinstance(title_obj, dict):
+                    serie_name = html.unescape(str(title_obj.get('text', '')).strip())
+                else:
+                    serie_name = html.unescape(str(title_obj).strip()) if title_obj else ''
+
+                original_title_obj = list_item.get('originalTitleText', {})
+                if isinstance(original_title_obj, dict):
+                    original_name = html.unescape(str(original_title_obj.get('text', '')).strip())
+                else:
+                    original_name = html.unescape(str(original_title_obj).strip()) if original_title_obj else ''
+
+                if not serie_name:
+                    serie_name = original_name
 
                 year = str(list_item.get('releaseYear', 0) or 0)
                 img_original = list_item.get('primaryImage', {}).get('url', '')
                 img = resize_poster(img_original)
 
-                if not img or not name:
+                if not img or not serie_name:
                     continue
 
                 page = f'{self.base}/title/{imdb_id}/'
-                itens.append((name, img, page, year, imdb_id))
+                itens.append((serie_name, img, page, year, imdb_id, original_name))
 
         except Exception:
             pass
@@ -106,18 +118,30 @@ class IMDBScraper:
                     imdb_id = imdb_id[2:]
                 imdb_id = 'tt' + imdb_id
 
-                name = list_item.get('titleText', '').strip()
-                name = html.unescape(name)
+                title_obj = list_item.get('titleText', {})
+                if isinstance(title_obj, dict):
+                    movie_name = html.unescape(str(title_obj.get('text', '')).strip())
+                else:
+                    movie_name = html.unescape(str(title_obj).strip()) if title_obj else ''
+
+                original_title_obj = list_item.get('originalTitleText', {})
+                if isinstance(original_title_obj, dict):
+                    original_name = html.unescape(str(original_title_obj.get('text', '')).strip())
+                else:
+                    original_name = html.unescape(str(original_title_obj).strip()) if original_title_obj else ''
+
+                if not movie_name:
+                    movie_name = original_name
 
                 year = str(list_item.get('releaseYear', 0) or 0)
                 img_original = list_item.get('primaryImage', {}).get('url', '')
                 img = resize_poster(img_original)
 
-                if not img or not name:
+                if not img or not movie_name:
                     continue
 
                 page = f'{self.base}/title/{imdb_id}/'
-                itens.append((name, img, page, year, imdb_id))
+                itens.append((movie_name, img, page, year, imdb_id, original_name))
 
         except Exception:
             pass
@@ -125,18 +149,18 @@ class IMDBScraper:
         return itens
 
     def series_250(self, page=1, per_page=250):
-        return self._chart_parser('/chart/toptv/?ref_=nv_tvv_250', page, per_page)
+        return self._chart_parser('/chart/toptv/?ref_=nv_tvv_250', page, per_page, content_type='series')
 
     def series_popular(self, page=1, per_page=100):
-        return self._chart_parser('/chart/tvmeter/?ref_=nv_tvv_mptv', page, per_page)
+        return self._chart_parser('/chart/tvmeter/?ref_=nv_tvv_mptv', page, per_page, content_type='series')
 
     def movies_250(self, page=1, per_page=250):
-        return self._chart_parser('/chart/top/?ref_=nv_mv_250', page, per_page)
+        return self._chart_parser('/chart/top/?ref_=nv_mv_250', page, per_page, content_type='movie')
 
     def movies_popular(self, page=1, per_page=100):
-        return self._chart_parser('/chart/moviemeter/?ref_=nv_mv_mpm', page, per_page)
+        return self._chart_parser('/chart/moviemeter/?ref_=nv_mv_mpm', page, per_page, content_type='movie')
 
-    def _chart_parser(self, chart_path, page=1, per_page=100):
+    def _chart_parser(self, chart_path, page=1, per_page=100, content_type='movie'):
         itens = []
         try:
             url = self.base + chart_path
@@ -152,8 +176,27 @@ class IMDBScraper:
 
             for i in dict_['itemListElement']:
                 data = i['item']
-                name = data.get('alternateName', data.get('name', ''))
-                name = html.unescape(name)
+                
+                alternate_title = data.get('alternateName', '')
+                if isinstance(alternate_title, dict):
+                    alternate_title = html.unescape(str(alternate_title.get('text', '')).strip())
+                else:
+                    alternate_title = html.unescape(str(alternate_title).strip()) if alternate_title else ''
+
+                original_name = data.get('name', '')
+                if isinstance(original_name, dict):
+                    original_name = html.unescape(str(original_name.get('text', '')).strip())
+                else:
+                    original_name = html.unescape(str(original_name).strip())
+
+                if content_type == 'series':
+                    serie_name = alternate_title if alternate_title else original_name
+                    if not serie_name:
+                        continue
+                else:
+                    movie_name = alternate_title if alternate_title else original_name
+                    if not movie_name:
+                        continue
 
                 url = data['url']
                 description = html.unescape(data.get('description', ''))
@@ -162,7 +205,11 @@ class IMDBScraper:
                     continue
 
                 imdb_id = 'tt' + re.findall(r'/tt(.*?)/', url)[0]
-                all_items.append((name, image, url, description, imdb_id))
+                
+                if content_type == 'series':
+                    all_items.append((serie_name, image, url, description, imdb_id, original_name))
+                else:
+                    all_items.append((movie_name, image, url, description, imdb_id, original_name))
 
             start = (page - 1) * per_page
             end = start + per_page
@@ -214,13 +261,16 @@ class IMDBScraper:
             )
 
             for idx, ep in enumerate(episodes, start=1):
-                name = ep.get('titleText', f'Episódio {idx}')
-                name = html.unescape(name)
+                title_obj = ep.get('titleText', f'Episódio {idx}')
+                if isinstance(title_obj, dict):
+                    episode_name = html.unescape(str(title_obj.get('text', f'Episódio {idx}')).strip())
+                else:
+                    episode_name = html.unescape(str(title_obj).strip())
 
                 img = resize_poster(ep.get('image', {}).get('url', ''))
                 description = html.unescape(ep.get('plot', ''))
 
-                itens.append((str(idx), name, img, fanart, description))
+                itens.append((str(idx), episode_name, img, fanart, description))
 
         except Exception:
             pass

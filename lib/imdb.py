@@ -19,7 +19,7 @@ def resize_poster(url, size='V1_QL100_UX1920'):
 
 class IMDBScraper:
     def __init__(self):
-        self.base = 'https://www.imdb.com'
+        self.base = 'https://m.imdb.com'
         self.headers = {
             'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8',
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36'
@@ -149,16 +149,16 @@ class IMDBScraper:
         return itens
 
     def series_250(self, page=1, per_page=250):
-        return self._chart_parser('/chart/toptv/?ref_=nv_tvv_250', page, per_page, content_type='series')
+        return self._chart_parser('/pt/chart/toptv/?ref_=chttvm_nv_menu', page, per_page, content_type='series')
 
     def series_popular(self, page=1, per_page=100):
-        return self._chart_parser('/chart/tvmeter/?ref_=nv_tvv_mptv', page, per_page, content_type='series')
+        return self._chart_parser('/pt/chart/tvmeter/?ref_=chtmvm_nv_menu', page, per_page, content_type='series')
 
     def movies_250(self, page=1, per_page=250):
-        return self._chart_parser('/chart/top/?ref_=nv_mv_250', page, per_page, content_type='movie')
+        return self._chart_parser('/pt/chart/top/?ref_=chtmvm_nv_menu', page, per_page, content_type='movie')
 
     def movies_popular(self, page=1, per_page=100):
-        return self._chart_parser('/chart/moviemeter/?ref_=nv_mv_mpm', page, per_page, content_type='movie')
+        return self._chart_parser('/pt/chart/moviemeter/?ref_=chttp_nv_menu', page, per_page, content_type='movie')
 
     def _chart_parser(self, chart_path, page=1, per_page=100, content_type='movie'):
         itens = []

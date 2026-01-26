@@ -3,7 +3,7 @@ try:
     from lib.ClientScraper import cfscraper
 except ImportError:
     from ClientScraper import cfscraper
-import xml.dom.minidom
+import xml.etree.ElementTree as ET
 import base64
 try:
     from lib.helper import *
@@ -11,6 +11,7 @@ except:
     from helper import *
 import re
 import time
+from urllib.parse import urlparse, parse_qs
 
 IPTV_PROBLEM_LOG = translate(os.path.join(profile, 'iptv_problems_log.txt'))
 
@@ -154,7 +155,7 @@ def ordenar_resolucao(item):
     return 5 
 
 class API:
-    def __init__(self, dns, username, password):
+    def __init__(self, dns, username, password, hide_adult='true'):
         self.dns = dns
         self.username = username
         self.password = password
@@ -166,7 +167,7 @@ class API:
         self.play_movies = '{0}/movie/{1}/{2}/'.format(dns, username, password)
         self.play_series = '{0}/series/{1}/{2}/'.format(dns, username, password)
         self.adult_tags = ['xxx','xXx','XXX','adult','Adult','ADULT','adults','Adults','ADULTS','porn','Porn','PORN', 'teste', 'TESTE', 'Teste']
-        self.hide_adult = 'true'
+        self.hide_adult = hide_adult
         self.server_alive = None
 
     def check_server_alive(self):
@@ -265,27 +266,28 @@ class API:
             return itens
         
         try:
-            doc = xml.dom.minidom.parseString(xml_data)
-            channels = doc.getElementsByTagName('channel')
+            root = ET.fromstring(xml_data)
+            channels = root.findall('channel')
             
             if not channels:
                 return itens
             
-            for i in range(len(channels)):
+            for channel in channels:
                 try:
-                    name = self.b64(doc.getElementsByTagName('title')[i].firstChild.nodeValue)
-                    url = self.check_protocol(
-                        doc.getElementsByTagName('playlist_url')[i].firstChild.nodeValue
-                    ).replace('<![CDATA[', '').replace(']]>', '')
-                    
-                    if 'All' not in name:
-                        if self.hide_adult == 'false':
-                            itens.append((name, url))
-                        else:
-                            if not any(s in name for s in self.adult_tags):
+                    name_elem = channel.find('title')
+                    url_elem = channel.find('playlist_url')
+                    if name_elem is not None and url_elem is not None:
+                        name = self.b64(name_elem.text)
+                        url = self.check_protocol(url_elem.text.replace('<![CDATA[', '').replace(']]>', ''))
+                        
+                        if 'All' not in name:
+                            if self.hide_adult == 'false':
                                 itens.append((name, url))
+                            else:
+                                if not any(s in name for s in self.adult_tags):
+                                    itens.append((name, url))
                 except Exception as e:
-                    log_iptv_problem(self.live_url, 'Erro ao processar categoria {0}: {1}'.format(i, str(e)))
+                    log_iptv_problem(self.live_url, 'Erro ao processar categoria: {0}'.format(str(e)))
                     continue
                     
         except Exception as e:
@@ -327,17 +329,20 @@ class API:
             )
             json_data = self.http(url_json_channels, 'json_url')
             
-            doc = xml.dom.minidom.parseString(xml_data)
-            channels = doc.getElementsByTagName('channel')
+            root = ET.fromstring(xml_data)
+            channels = root.findall('channel')
             
             if not channels:
                 return itens
             
-            for i in range(len(channels)):
+            for i, channel in enumerate(channels):
                 try:
+                    title_elem = channel.find('title')
+                    if title_elem is None:
+                        continue
                     name = re.sub(
                         '\[.*?min ', '-',
-                        self.b64(doc.getElementsByTagName('title')[i].firstChild.nodeValue)
+                        self.b64(title_elem.text)
                     )
                     
                     stream_id = self.channel_id(json_data, i)
@@ -353,9 +358,11 @@ class API:
                         pass
                     
                     try:
-                        thumb = doc.getElementsByTagName('desc_image')[i].firstChild.nodeValue
-                        thumb = thumb.replace('<![CDATA[ ', '').replace(' ]]>', '')
-                        desc = self.b64(doc.getElementsByTagName('description')[i].firstChild.nodeValue)
+                        desc_image_elem = channel.find('desc_image')
+                        description_elem = channel.find('description')
+                        thumb = desc_image_elem.text.replace('<![CDATA[ ', '').replace(' ]]>', '') if desc_image_elem is not None else ''
+                        
+                        desc = self.b64(description_elem.text) if description_elem is not None else 'No Info Available'
                         try:
                             desc = replace_desc(desc)
                         except:
@@ -371,10 +378,7 @@ class API:
                     continue
             
             if itens:
-                try:
-                    itens = sorted(itens, key=ordenar_resolucao)
-                except:
-                    pass
+                itens = sorted(itens, key=lambda x: x[0].lower())
                     
         except Exception as e:
             log_iptv_problem(url, 'Erro ao abrir canais: {0}'.format(str(e)))

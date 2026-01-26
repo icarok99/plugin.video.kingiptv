@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
-try:
-    from lib.ClientScraper import cfscraper
-except ImportError:
-    from ClientScraper import cfscraper
 import xml.etree.ElementTree as ET
 import base64
+import requests
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
 try:
     from lib.helper import *
 except:
@@ -18,6 +17,23 @@ IPTV_PROBLEM_LOG = translate(os.path.join(profile, 'iptv_problems_log.txt'))
 REQUEST_TIMEOUT = 10
 MAX_RETRIES = 2
 CACHE_FAILED_URLS = {}
+
+def create_session():
+    session = requests.Session()
+    retry = Retry(
+        total=MAX_RETRIES,
+        read=MAX_RETRIES,
+        connect=MAX_RETRIES,
+        backoff_factor=0.3,
+        status_forcelist=(500, 502, 504)
+    )
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount('http://', adapter)
+    session.mount('https://', adapter)
+    session.headers.update({
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    })
+    return session
 
 def log_iptv_problem(url, error_msg=''):
     try:
@@ -85,8 +101,11 @@ def check_iptv(url_iptv):
 
 def parselist(url):
     iptv = []
+    session = create_session()
+    
     try:
-        url = cfscraper.get(url, timeout=REQUEST_TIMEOUT).json()['url']
+        response = session.get(url, timeout=REQUEST_TIMEOUT)
+        url = response.json()['url']
     except:
         pass
     
@@ -95,7 +114,8 @@ def parselist(url):
             try:
                 key = url.split('/')[-1]
                 url = 'https://paste.kodi.tv/documents/' + key
-                src = cfscraper.get(url, timeout=REQUEST_TIMEOUT).json()['data']
+                response = session.get(url, timeout=REQUEST_TIMEOUT)
+                src = response.json()['data']
                 lines = src.split('\n')
                 
                 for i in lines:
@@ -108,7 +128,8 @@ def parselist(url):
             except Exception as e:
                 log_iptv_problem(url, 'Erro paste.kodi.tv: {0}'.format(str(e)))
         else:
-            src = cfscraper.get(url, timeout=REQUEST_TIMEOUT).text
+            response = session.get(url, timeout=REQUEST_TIMEOUT)
+            src = response.text
             lines = src.split('\n')
             
             for i in lines:
@@ -235,13 +256,14 @@ class API:
         self.adult_tags = ['xxx','xXx','XXX','adult','Adult','ADULT','adults','Adults','ADULTS','porn','Porn','PORN', 'teste', 'TESTE', 'Teste']
         self.hide_adult = hide_adult
         self.server_alive = None
+        self.session = create_session()
 
     def check_server_alive(self):
         if self.server_alive is not None:
             return self.server_alive
         
         try:
-            response = cfscraper.get(self.player_api, timeout=5)
+            response = self.session.get(self.player_api, timeout=10)
             self.server_alive = response.status_code == 200
             return self.server_alive
         except:
@@ -254,37 +276,45 @@ class API:
         if not self.check_server_alive():
             return '' if mode != 'json_url' else None
         
-        for attempt in range(MAX_RETRIES):
-            try:
-                if not mode:
-                    response = cfscraper.get(url, timeout=REQUEST_TIMEOUT)
-                    return response.content
-                    
-                elif mode == 'channels_category':
-                    response = cfscraper.get(self.live_url, timeout=REQUEST_TIMEOUT)
-                    return response.content
-                    
-                elif mode == 'json_url':
-                    response = cfscraper.get(url, timeout=REQUEST_TIMEOUT)
-                    return response.json()
-                    
-                elif mode == 'vod':
-                    response = cfscraper.get(url, timeout=REQUEST_TIMEOUT)
-                    return response.text
-                    
-            except cfscraper.exceptions.Timeout:
-                log_iptv_problem(url, 'Timeout na tentativa {0}'.format(attempt + 1))
-                if attempt == MAX_RETRIES - 1:
-                    CACHE_FAILED_URLS[url] = time.time()
-                    
-            except cfscraper.exceptions.RequestException as e:
-                log_iptv_problem(url, 'Erro de requisição: {0}'.format(str(e)))
-                CACHE_FAILED_URLS[url] = time.time()
-                break
+        try:
+            if not mode:
+                response = self.session.get(url, timeout=REQUEST_TIMEOUT)
+                response.raise_for_status()
+                return response.content
                 
-            except Exception as e:
-                log_iptv_problem(url, 'Erro inesperado: {0}'.format(str(e)))
-                break
+            elif mode == 'channels_category':
+                response = self.session.get(self.live_url, timeout=REQUEST_TIMEOUT)
+                response.raise_for_status()
+                return response.content
+                
+            elif mode == 'json_url':
+                response = self.session.get(url, timeout=REQUEST_TIMEOUT)
+                response.raise_for_status()
+                return response.json()
+                
+            elif mode == 'vod':
+                response = self.session.get(url, timeout=REQUEST_TIMEOUT)
+                response.raise_for_status()
+                return response.text
+                
+        except requests.exceptions.Timeout:
+            log_iptv_problem(url or self.live_url, 'Timeout ao fazer requisição')
+            CACHE_FAILED_URLS[url or self.live_url] = time.time()
+            
+        except requests.exceptions.ConnectionError as e:
+            log_iptv_problem(url or self.live_url, 'Erro de conexão: {0}'.format(str(e)))
+            CACHE_FAILED_URLS[url or self.live_url] = time.time()
+            
+        except requests.exceptions.HTTPError as e:
+            log_iptv_problem(url or self.live_url, 'Erro HTTP: {0}'.format(str(e)))
+            CACHE_FAILED_URLS[url or self.live_url] = time.time()
+            
+        except requests.exceptions.RequestException as e:
+            log_iptv_problem(url or self.live_url, 'Erro de requisição: {0}'.format(str(e)))
+            CACHE_FAILED_URLS[url or self.live_url] = time.time()
+            
+        except Exception as e:
+            log_iptv_problem(url or self.live_url, 'Erro inesperado: {0}'.format(str(e)))
         
         return '' if mode != 'json_url' else None
 

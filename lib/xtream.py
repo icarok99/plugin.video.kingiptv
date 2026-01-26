@@ -258,11 +258,11 @@ class API:
             try:
                 if not mode:
                     response = cfscraper.get(url, timeout=REQUEST_TIMEOUT)
-                    return response
+                    return response.content
                     
                 elif mode == 'channels_category':
                     response = cfscraper.get(self.live_url, timeout=REQUEST_TIMEOUT)
-                    return response
+                    return response.content
                     
                 elif mode == 'json_url':
                     response = cfscraper.get(url, timeout=REQUEST_TIMEOUT)

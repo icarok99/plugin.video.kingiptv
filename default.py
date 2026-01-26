@@ -3,7 +3,7 @@ import os
 import time
 from lib.helper import *
 import inputstreamhelper
-from lib import xtream, tunein, pluto, imdb, api_vod
+from lib import xtream, tunein, pluto, imdb, api_vod, hlsretry
 
 profile = xbmcvfs.translatePath('special://profile/addon_data/plugin.video.kingiptv')
 
@@ -147,12 +147,26 @@ def open_channels(param):
 
 @route('/play_iptv')
 def play_iptv(param):
-    name = param['name']
-    description = param['description']
-    iconimage = param['iconimage']
-    url = param['url']
-    plugin = 'plugin://plugin.video.f4mTester/?streamtype=HLSRETRY&name=' + quote_plus(str(name)) + '&iconImage=' + quote_plus(str(iconimage)) + '&thumbnailImage=' + quote_plus(str(iconimage)) + '&description=' + quote_plus(description) + '&url=' + quote_plus(url)
-    xbmc.executebuiltin('RunPlugin(%s)' % plugin)
+    name = param.get('name', 'Canal IPTV')
+    description = param.get('description', '')
+    iconimage = param.get('iconimage', '')
+    url = param.get('url', '')
+    if '|' in url: url = url.split('|')[0]
+    try: hlsretry.XtreamProxy().start()
+    except: pass
+    proxy_url = f'http://127.0.0.1:{hlsretry.PORT_NUMBER}/?url={quote_plus(url)}'
+    play_item = xbmcgui.ListItem(path=proxy_url)
+    play_item.setContentLookup(False)
+    play_item.setArt({"icon": iconimage or "DefaultVideo.png", "thumb": iconimage or "DefaultVideo.png"})
+    play_item.setMimeType("application/vnd.apple.mpegurl")
+    info_tag = play_item.getVideoInfoTag() if hasattr(play_item, 'getVideoInfoTag') else None
+    if info_tag:
+        info_tag.setTitle(name)
+        info_tag.setPlot(description)
+        info_tag.setMediaType('video')
+    else:
+        play_item.setInfo('video', {'title': name, 'plot': description, 'mediatype': 'video'})
+    xbmc.Player().play(proxy_url, play_item)
 
 @route('/channels_pluto')
 def channels_pluto(param=None):

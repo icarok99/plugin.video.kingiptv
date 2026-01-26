@@ -142,6 +142,72 @@ def replace_name(name):
         name = name + '[/COLOR]'
     return name
 
+def clean_channel_name(name):
+    if not name:
+        return name
+    
+    name = re.sub(r'\s*\[\d{1,2}:\d{2}\s*-\s*\d{1,2}:\d{2}\]', '', name)
+    name = re.sub(r'\s*\+\s*\d+\.?\d*\s*min', '', name)
+    name = re.sub(r'\s+', ' ', name).strip()
+    
+    if '-' not in name:
+        tags_inicio = []
+        resto = name
+        
+        while True:
+            match = re.match(r'^(\[[^\]]+\])\s*', resto)
+            if match:
+                tags_inicio.append(match.group(1))
+                resto = resto[match.end():]
+            else:
+                break
+        
+        if resto:
+            sufixos_canal = [
+                'HD', 'FHD', 'SD', '4K', 'UHD',
+                'HD+', 'HD²', 'HD2', 'HD1',
+                'PLUS', 'PREMIUM', 'MAX'
+            ]
+            
+            palavras = resto.split()
+            ultimo_sufixo_idx = -1
+            
+            for idx, palavra in enumerate(palavras):
+                palavra_limpa = re.sub(r'[²+]', '', palavra.upper())
+                
+                if palavra.upper() in sufixos_canal or palavra_limpa in sufixos_canal:
+                    ultimo_sufixo_idx = idx
+            
+            if ultimo_sufixo_idx >= 0 and ultimo_sufixo_idx < len(palavras) - 1:
+                canal_palavras = palavras[:ultimo_sufixo_idx + 1]
+                programa_palavras = palavras[ultimo_sufixo_idx + 1:]
+                
+                canal_str = ' '.join(canal_palavras)
+                programa_str = ' '.join(programa_palavras)
+                
+                if tags_inicio:
+                    name = ' '.join(tags_inicio) + ' ' + canal_str + ' - ' + programa_str
+                else:
+                    name = canal_str + ' - ' + programa_str
+            elif len(palavras) >= 3:
+                canal_palavras = palavras[:2]
+                programa_palavras = palavras[2:]
+                
+                canal_str = ' '.join(canal_palavras)
+                programa_str = ' '.join(programa_palavras)
+                
+                if tags_inicio:
+                    name = ' '.join(tags_inicio) + ' ' + canal_str + ' - ' + programa_str
+                else:
+                    name = canal_str + ' - ' + programa_str
+    
+    if '-' in name:
+        name = re.sub(r'\s*-\s*', ' - ', name)
+    
+    name = re.sub(r'\s+', ' ', name).strip()
+    
+    return name
+
 def ordenar_resolucao(item):
     name = item[0]
     if 'FHD' in name:
@@ -192,11 +258,11 @@ class API:
             try:
                 if not mode:
                     response = cfscraper.get(url, timeout=REQUEST_TIMEOUT)
-                    return response.content
+                    return response
                     
                 elif mode == 'channels_category':
                     response = cfscraper.get(self.live_url, timeout=REQUEST_TIMEOUT)
-                    return response.content
+                    return response
                     
                 elif mode == 'json_url':
                     response = cfscraper.get(url, timeout=REQUEST_TIMEOUT)
@@ -340,10 +406,9 @@ class API:
                     title_elem = channel.find('title')
                     if title_elem is None:
                         continue
-                    name = re.sub(
-                        '\[.*?min ', '-',
-                        self.b64(title_elem.text)
-                    )
+                    
+                    name = self.b64(title_elem.text)
+                    name = clean_channel_name(name)
                     
                     stream_id = self.channel_id(json_data, i)
                     

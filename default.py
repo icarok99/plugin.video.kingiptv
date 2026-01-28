@@ -238,6 +238,7 @@ def find_movies():
         if itens:
             setcontent('movies')
             for movie_name, img, page, year, imdb_id, original_name in itens:
+                movie_name = f'{movie_name} {year}'
                 addMenuItem({
                     'name': movie_name,
                     'description': '',

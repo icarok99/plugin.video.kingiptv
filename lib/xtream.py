@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import xml.etree.ElementTree as ET
 import base64
 import requests
@@ -259,6 +260,7 @@ def ordenar_resolucao(item):
 
 class API:
     def __init__(self, dns, username, password, hide_adult='true'):
+        
         if not username or not password:
             raise ValueError('Username e password são obrigatórios')
         
@@ -272,14 +274,21 @@ class API:
         self.adult_tags = ['xxx','xXx','XXX','adult','Adult','ADULT','adults','Adults','ADULTS','porn','Porn','PORN', 'teste', 'TESTE', 'Teste']
         self.hide_adult = hide_adult
         self.server_alive = None
-        self.server_format = None
+        self.server_format = None  # 'enigma2' ou 'xtream'
         self.session = create_session()
         
         self.live_url = '{0}/enigma2.php?username={1}&password={2}&type=get_live_categories'.format(dns, username, password)
         self.vod_url = '{0}/enigma2.php?username={1}&password={2}&type=get_vod_categories'.format(dns, username, password)
         self.series_url = '{0}/enigma2.php?username={1}&password={2}&type=get_series_categories'.format(dns, username, password)
+        
 
     def check_server_alive(self):
+        """
+        CORREÇÃO PRINCIPAL: Verifica servidor e detecta formato suportado
+        - Testa player_api primeiro (Xtream Codes API)
+        - Se funcionar, testa enigma2.php com timeout menor
+        - Define server_format baseado no que funciona
+        """
         if self.server_alive is not None:
             return self.server_alive
         
@@ -297,15 +306,14 @@ class API:
                     response_enigma = test_session.get(self.live_url, timeout=3, allow_redirects=False)
                     
                     if response_enigma.status_code == 200:
-                        self.server_format = 'enigma2'
+                        self.server_format = 'enigma2'  # Prefere enigma2 se disponível
+                    else:
                 except requests.exceptions.Timeout:
-                    pass
                 except:
-                    pass
                 
                 return True
-        except Exception as e:
-            pass
+            else:
+        except Exception:
         
         try:
             response = self.session.get(self.live_url, timeout=10, allow_redirects=False)
@@ -315,8 +323,8 @@ class API:
                 self.server_alive = True
                 self.server_format = 'enigma2'
                 return True
-        except Exception as e:
-            pass
+            else:
+        except Exception:
         
         self.server_alive = False
         self.server_format = None
@@ -418,10 +426,14 @@ class API:
             return []
 
     def channels_category(self):
+        """
+        Retorna categorias de canais usando o formato suportado pelo servidor
+        """
         itens = []
         
         if not self.check_server_alive():
             return itens
+        
         
         if self.server_format == 'enigma2':
             xml_data = self.http('', 'channels_category')
@@ -501,6 +513,9 @@ class API:
         return ''
 
     def channels_open(self, url):
+        """
+        Abre canais de uma categoria - funciona com ambos formatos
+        """
         itens = []
         
         if 'player_api.php' in url and 'action=get_live_streams' in url:

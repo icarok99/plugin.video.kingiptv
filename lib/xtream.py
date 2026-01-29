@@ -274,15 +274,24 @@ class API:
         if self.server_alive is not None:
             return self.server_alive
         
-        try:
-            response = self.session.get(self.player_api, timeout=10)
-            self.server_alive = response.status_code == 200
-            return self.server_alive
-        except:
-            self.server_alive = False
-            log_iptv_problem(self.dns, 'Servidor não responde')
-            CACHE_FAILED_URLS[self.dns] = time.time()
-            return False
+        endpoints_to_try = [
+            self.player_api,
+            self.live_url,
+        ]
+        
+        for endpoint in endpoints_to_try:
+            try:
+                response = self.session.get(endpoint, timeout=10)
+                if response.status_code == 200:
+                    self.server_alive = True
+                    return True
+            except:
+                continue
+        
+        self.server_alive = False
+        log_iptv_problem(self.dns, 'Servidor não responde em nenhum endpoint')
+        CACHE_FAILED_URLS[self.dns] = time.time()
+        return False
 
     def http(self, url='', mode=None):
         if not self.check_server_alive():

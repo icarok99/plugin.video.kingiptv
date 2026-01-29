@@ -15,7 +15,7 @@ from urllib.parse import urlparse, parse_qs
 IPTV_PROBLEM_LOG = translate(os.path.join(profile, 'iptv_problems_log.txt'))
 
 REQUEST_TIMEOUT = 10
-MAX_RETRIES = 2
+MAX_RETRIES = 1
 CACHE_FAILED_URLS = {}
 
 def create_session():
@@ -823,3 +823,4 @@ class API:
             log_iptv_problem(url or self.vod_url, 'Erro ao processar VOD: {0}'.format(str(e)))
         
         return itens
+

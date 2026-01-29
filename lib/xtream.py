@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import xml.etree.ElementTree as ET
 import base64
 import requests
@@ -66,6 +65,11 @@ def extract_info(url):
         query_params = parse_qs(parsed_url.query)
         username = query_params.get('username', [None])[0]
         password = query_params.get('password', [None])[0]
+        
+        if not username or not password:
+            log_iptv_problem(url, 'URL sem username ou password válidos')
+            return None, None, None
+        
         dns = '{0}://{1}:{2}'.format(protocol, host, port)
         
         return dns, username, password
@@ -123,7 +127,7 @@ def parselist(url):
                     if 'http' in i:
                         if check_iptv(i):
                             dns, username, password = extract_info(i)
-                            if dns:
+                            if dns and username and password:
                                 iptv.append((dns, username, password))
             except Exception as e:
                 log_iptv_problem(url, 'Erro paste.kodi.tv: {0}'.format(str(e)))
@@ -137,7 +141,7 @@ def parselist(url):
                 if 'http' in i:
                     if check_iptv(i):
                         dns, username, password = extract_info(i)
-                        if dns:
+                        if dns and username and password:
                             iptv.append((dns, username, password))
     except Exception as e:
         log_iptv_problem(url, 'Erro parselist: {0}'.format(str(e)))
@@ -255,12 +259,12 @@ def ordenar_resolucao(item):
 
 class API:
     def __init__(self, dns, username, password, hide_adult='true'):
+        if not username or not password:
+            raise ValueError('Username e password são obrigatórios')
+        
         self.dns = dns
         self.username = username
         self.password = password
-        self.live_url = '{0}/enigma2.php?username={1}&password={2}&type=get_live_categories'.format(dns, username, password)
-        self.vod_url = '{0}/enigma2.php?username={1}&password={2}&type=get_vod_categories'.format(dns, username, password)
-        self.series_url = '{0}/enigma2.php?username={1}&password={2}&type=get_series_categories'.format(dns, username, password)
         self.player_api = '{0}/player_api.php?username={1}&password={2}'.format(dns, username, password)
         self.play_url = '{0}/live/{1}/{2}/'.format(dns, username, password)
         self.play_movies = '{0}/movie/{1}/{2}/'.format(dns, username, password)
@@ -268,28 +272,55 @@ class API:
         self.adult_tags = ['xxx','xXx','XXX','adult','Adult','ADULT','adults','Adults','ADULTS','porn','Porn','PORN', 'teste', 'TESTE', 'Teste']
         self.hide_adult = hide_adult
         self.server_alive = None
+        self.server_format = None
         self.session = create_session()
+        
+        self.live_url = '{0}/enigma2.php?username={1}&password={2}&type=get_live_categories'.format(dns, username, password)
+        self.vod_url = '{0}/enigma2.php?username={1}&password={2}&type=get_vod_categories'.format(dns, username, password)
+        self.series_url = '{0}/enigma2.php?username={1}&password={2}&type=get_series_categories'.format(dns, username, password)
 
     def check_server_alive(self):
         if self.server_alive is not None:
             return self.server_alive
         
-        endpoints_to_try = [
-            self.player_api,
-            self.live_url,
-        ]
+        try:
+            response = self.session.get(self.player_api, timeout=10, allow_redirects=False)
+            status = response.status_code
+            
+            if status == 200:
+                self.server_alive = True
+                self.server_format = 'xtream'
+                
+                try:
+                    test_session = requests.Session()
+                    test_session.headers.update(self.session.headers)
+                    response_enigma = test_session.get(self.live_url, timeout=3, allow_redirects=False)
+                    
+                    if response_enigma.status_code == 200:
+                        self.server_format = 'enigma2'
+                except requests.exceptions.Timeout:
+                    pass
+                except:
+                    pass
+                
+                return True
+        except Exception as e:
+            pass
         
-        for endpoint in endpoints_to_try:
-            try:
-                response = self.session.get(endpoint, timeout=10)
-                if response.status_code == 200:
-                    self.server_alive = True
-                    return True
-            except:
-                continue
+        try:
+            response = self.session.get(self.live_url, timeout=10, allow_redirects=False)
+            status = response.status_code
+            
+            if status == 200:
+                self.server_alive = True
+                self.server_format = 'enigma2'
+                return True
+        except Exception as e:
+            pass
         
         self.server_alive = False
-        log_iptv_problem(self.dns, 'Servidor não responde em nenhum endpoint')
+        self.server_format = None
+        log_iptv_problem(self.dns, 'Servidor não responde em nenhum formato (player_api ou enigma2)')
         CACHE_FAILED_URLS[self.dns] = time.time()
         return False
 
@@ -300,22 +331,33 @@ class API:
         try:
             if not mode:
                 response = self.session.get(url, timeout=REQUEST_TIMEOUT)
-                response.raise_for_status()
+                if response.status_code != 200:
+                    raise requests.exceptions.HTTPError('Status code: {}'.format(response.status_code))
                 return response.content
                 
             elif mode == 'channels_category':
+                if self.server_format != 'enigma2':
+                    return ''
+                
                 response = self.session.get(self.live_url, timeout=REQUEST_TIMEOUT)
-                response.raise_for_status()
+                if response.status_code != 200:
+                    raise requests.exceptions.HTTPError('Status code: {}'.format(response.status_code))
                 return response.content
                 
             elif mode == 'json_url':
                 response = self.session.get(url, timeout=REQUEST_TIMEOUT)
-                response.raise_for_status()
-                return response.json()
+                if response.status_code != 200:
+                    raise requests.exceptions.HTTPError('Status code: {}'.format(response.status_code))
+                data = response.json()
+                return data
                 
             elif mode == 'vod':
+                if self.server_format != 'enigma2':
+                    return ''
+                
                 response = self.session.get(url, timeout=REQUEST_TIMEOUT)
-                response.raise_for_status()
+                if response.status_code != 200:
+                    raise requests.exceptions.HTTPError('Status code: {}'.format(response.status_code))
                 return response.text
                 
         except requests.exceptions.Timeout:
@@ -377,25 +419,63 @@ class API:
 
     def channels_category(self):
         itens = []
-        xml_data = self.http('', 'channels_category')
         
-        if not xml_data:
+        if not self.check_server_alive():
             return itens
         
-        try:
-            root = ET.fromstring(xml_data)
-            channels = root.findall('channel')
+        if self.server_format == 'enigma2':
+            xml_data = self.http('', 'channels_category')
             
-            if not channels:
+            if not xml_data:
                 return itens
             
-            for channel in channels:
-                try:
-                    name_elem = channel.find('title')
-                    url_elem = channel.find('playlist_url')
-                    if name_elem is not None and url_elem is not None:
-                        name = self.b64(name_elem.text)
-                        url = self.check_protocol(url_elem.text.replace('<![CDATA[', '').replace(']]>', ''))
+            try:
+                root = ET.fromstring(xml_data)
+                channels = root.findall('channel')
+                
+                if not channels:
+                    return itens
+                
+                for channel in channels:
+                    try:
+                        name_elem = channel.find('title')
+                        url_elem = channel.find('playlist_url')
+                        if name_elem is not None and url_elem is not None:
+                            name = self.b64(name_elem.text)
+                            url = self.check_protocol(url_elem.text.replace('<![CDATA[', '').replace(']]>', ''))
+                            
+                            if 'All' not in name:
+                                if self.hide_adult == 'false':
+                                    itens.append((name, url))
+                                else:
+                                    if not any(s in name for s in self.adult_tags):
+                                        itens.append((name, url))
+                    except Exception as e:
+                        log_iptv_problem(self.live_url, 'Erro ao processar categoria: {0}'.format(str(e)))
+                        continue
+                        
+            except Exception as e:
+                log_iptv_problem(self.live_url, 'Erro ao parsear XML de categorias: {0}'.format(str(e)))
+        
+        elif self.server_format == 'xtream':
+            url_categories = '{0}&action=get_live_categories'.format(self.player_api)
+            categories = self.http(url_categories, 'json_url')
+            
+            if not categories:
+                return itens
+            
+            try:
+                for cat in categories:
+                    try:
+                        name = cat.get('category_name', '')
+                        cat_id = cat.get('category_id', '')
+                        
+                        if not cat_id:
+                            continue
+                        
+                        url = '{0}&action=get_live_streams&category_id={1}'.format(
+                            self.player_api, cat_id
+                        )
                         
                         if 'All' not in name:
                             if self.hide_adult == 'false':
@@ -403,12 +483,11 @@ class API:
                             else:
                                 if not any(s in name for s in self.adult_tags):
                                     itens.append((name, url))
-                except Exception as e:
-                    log_iptv_problem(self.live_url, 'Erro ao processar categoria: {0}'.format(str(e)))
-                    continue
-                    
-        except Exception as e:
-            log_iptv_problem(self.live_url, 'Erro ao parsear XML de categorias: {0}'.format(str(e)))
+                    except Exception as e:
+                        log_iptv_problem(url_categories, 'Erro ao processar categoria: {0}'.format(str(e)))
+                        continue
+            except Exception as e:
+                log_iptv_problem(url_categories, 'Erro ao processar categorias: {0}'.format(str(e)))
         
         return itens
     
@@ -422,6 +501,47 @@ class API:
         return ''
 
     def channels_open(self, url):
+        itens = []
+        
+        if 'player_api.php' in url and 'action=get_live_streams' in url:
+            json_data = self.http(url, 'json_url')
+            
+            if not json_data:
+                return itens
+            
+            try:
+                for stream in json_data:
+                    try:
+                        name = stream.get('name', '')
+                        stream_id = stream.get('stream_id', '')
+                        
+                        if not stream_id:
+                            continue
+                        
+                        name = clean_channel_name(name)
+                        url_ = '{0}{1}.m3u8'.format(self.play_url, stream_id)
+                        
+                        try:
+                            name = replace_name(name)
+                        except:
+                            pass
+                        
+                        thumb = stream.get('stream_icon', '')
+                        desc = 'No Info Available'
+                        
+                        itens.append((name, url_, thumb, desc))
+                    except Exception as e:
+                        log_iptv_problem(url, 'Erro ao processar stream: {0}'.format(str(e)))
+                        continue
+                
+                if itens:
+                    itens = sorted(itens, key=lambda x: x[0].lower())
+                    
+            except Exception as e:
+                log_iptv_problem(url, 'Erro ao processar streams: {0}'.format(str(e)))
+            
+            return itens
+        
         try:
             chan_id = url.split('cat_id=')[1].split('&')[0]
         except:
@@ -430,8 +550,6 @@ class API:
             except:
                 chan_id = ''
 
-        itens = []
-        
         if not chan_id:
             return itens
         

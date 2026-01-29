@@ -302,12 +302,17 @@ class API:
                     if response_enigma.status_code == 200:
                         self.server_format = 'enigma2'
                     else:
+                        pass
                 except requests.exceptions.Timeout:
+                    pass
                 except:
+                    pass
                 
                 return True
             else:
+                pass
         except Exception:
+            pass
         
         try:
             response = self.session.get(self.live_url, timeout=10, allow_redirects=False)
@@ -318,7 +323,9 @@ class API:
                 self.server_format = 'enigma2'
                 return True
             else:
+                pass
         except Exception:
+            pass
         
         self.server_alive = False
         self.server_format = None
@@ -402,19 +409,19 @@ class API:
     def regex_from_to(self, text, from_string, to_string, excluding=True):
         if excluding:
             try:
-                r = re.search("(?i)" + from_string + "([\S\s]+?)" + to_string, text).group(1)
+                r = re.search(r"(?i)" + from_string + r"([\S\s]+?)" + to_string, text).group(1)
             except:
                 r = ''
         else:
             try:
-                r = re.search("(?i)(" + from_string + "[\S\s]+?" + to_string + ")", text).group(1)
+                r = re.search(r"(?i)(" + from_string + r"[\S\s]+?" + to_string + r")", text).group(1)
             except:
                 r = ''
         return r 
 
     def regex_get_all(self, text, start_with, end_with):
         try:
-            r = re.findall("(?i)(" + start_with + "[\S\s]+?" + end_with + ")", text)
+            r = re.findall(r"(?i)(" + start_with + r"[\S\s]+?" + end_with + r")", text)
             return r
         except:
             return []

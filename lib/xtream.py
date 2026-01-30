@@ -149,25 +149,6 @@ def parselist(url):
     
     return iptv
 
-def replace_desc(desc):
-    substituicoes = {
-        '[': '[COLOR yellow][',
-        '(': '[/COLOR]('
-    }
-
-    def substituidor(match):
-        return substituicoes[match.group(0)]
-
-    padrao = re.compile('|'.join(map(re.escape, substituicoes.keys())))
-    resultado = padrao.sub(substituidor, desc)
-    return resultado
-
-def replace_name(name):
-    if '-' in name:
-        name = name.replace('-', '-[COLOR yellow]')
-        name = name + '[/COLOR]'
-    return name
-
 def clean_channel_name(name):
     if not name:
         return name
@@ -280,7 +261,6 @@ class API:
         self.live_url = '{0}/enigma2.php?username={1}&password={2}&type=get_live_categories'.format(dns, username, password)
         self.vod_url = '{0}/enigma2.php?username={1}&password={2}&type=get_vod_categories'.format(dns, username, password)
         self.series_url = '{0}/enigma2.php?username={1}&password={2}&type=get_series_categories'.format(dns, username, password)
-        
 
     def check_server_alive(self):
         if self.server_alive is not None:
@@ -301,16 +281,12 @@ class API:
                     
                     if response_enigma.status_code == 200:
                         self.server_format = 'enigma2'
-                    else:
-                        pass
                 except requests.exceptions.Timeout:
                     pass
                 except:
                     pass
                 
                 return True
-            else:
-                pass
         except Exception:
             pass
         
@@ -322,8 +298,6 @@ class API:
                 self.server_alive = True
                 self.server_format = 'enigma2'
                 return True
-            else:
-                pass
         except Exception:
             pass
         
@@ -432,7 +406,6 @@ class API:
         if not self.check_server_alive():
             return itens
         
-        
         if self.server_format == 'enigma2':
             xml_data = self.http('', 'channels_category')
             
@@ -531,13 +504,8 @@ class API:
                         name = clean_channel_name(name)
                         url_ = '{0}{1}.m3u8'.format(self.play_url, stream_id)
                         
-                        try:
-                            name = replace_name(name)
-                        except:
-                            pass
-                        
                         thumb = stream.get('stream_icon', '')
-                        desc = 'No Info Available'
+                        desc = ''
                         
                         itens.append((name, url_, thumb, desc))
                     except Exception as e:
@@ -597,23 +565,13 @@ class API:
                     url_ = '{0}{1}.m3u8'.format(self.play_url, stream_id)
                     
                     try:
-                        name = replace_name(name)
-                    except:
-                        pass
-                    
-                    try:
                         desc_image_elem = channel.find('desc_image')
                         description_elem = channel.find('description')
                         thumb = desc_image_elem.text.replace('<![CDATA[ ', '').replace(' ]]>', '') if desc_image_elem is not None else ''
-                        
-                        desc = self.b64(description_elem.text) if description_elem is not None else 'No Info Available'
-                        try:
-                            desc = replace_desc(desc)
-                        except:
-                            pass
+                        desc = ''
                     except:
                         thumb = ''
-                        desc = 'No Info Available'
+                        desc = ''
                     
                     itens.append((name, url_, thumb, desc))
                     
@@ -823,4 +781,3 @@ class API:
             log_iptv_problem(url or self.vod_url, 'Erro ao processar VOD: {0}'.format(str(e)))
         
         return itens
-

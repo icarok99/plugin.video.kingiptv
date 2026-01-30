@@ -188,37 +188,14 @@ def clean_channel_name(name):
         if palavra.upper() in sufixos_canal or palavra_limpa in sufixos_canal:
             ultimo_sufixo_idx = idx
     
-    if ultimo_sufixo_idx >= 0 and ultimo_sufixo_idx < len(palavras) - 1:
+    if ultimo_sufixo_idx >= 0:
         canal_palavras = palavras[:ultimo_sufixo_idx + 1]
-        programa_palavras = palavras[ultimo_sufixo_idx + 1:]
-        
         canal_str = ' '.join(canal_palavras)
-        programa_str = ' '.join(programa_palavras)
-        
-        if tags_inicio:
-            name = ' '.join(tags_inicio) + ' ' + canal_str + ' - ' + programa_str
-        else:
-            name = canal_str + ' - ' + programa_str
-    
-    elif ultimo_sufixo_idx >= 0:
-        canal_str = ' '.join(palavras)
         
         if tags_inicio:
             name = ' '.join(tags_inicio) + ' ' + canal_str
         else:
             name = canal_str
-    
-    elif len(palavras) >= 3:
-        canal_palavras = palavras[:2]
-        programa_palavras = palavras[2:]
-        
-        canal_str = ' '.join(canal_palavras)
-        programa_str = ' '.join(programa_palavras)
-        
-        if tags_inicio:
-            name = ' '.join(tags_inicio) + ' ' + canal_str + ' - ' + programa_str
-        else:
-            name = canal_str + ' - ' + programa_str
     
     if '-' in name:
         name = re.sub(r'\s*-\s*', ' - ', name)

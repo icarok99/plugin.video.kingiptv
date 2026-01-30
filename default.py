@@ -136,12 +136,12 @@ def open_channels(param):
     url = param['url'] 
     open_ = xtream.API(dns,username,password).channels_open(url)
     if open_:
-        setcontent('movies')
+        setcontent('videos')
         for i in open_:
             name,link,thumb,desc = i
             addMenuItem({'name': name, 'description': desc, 'iconimage': thumb, 'url': link}, destiny='/play_iptv', folder=False)
         end()
-        setview('List')
+        setview('WideList')
     else:
         notify('Opção indisponivel')
 

@@ -5,9 +5,9 @@ except:
     pass
 import six as six_
 if six_.PY3:
-    from urllib.parse import urlparse as urlparse_, parse_qs as parse_qs_, parse_qsl as parse_qsl_, quote as quote_, unquote as unquote_, quote_plus as quote_plus_, unquote_plus as unquote_plus_, urlencode as urlencode_ #python 3
+    from urllib.parse import urlparse as urlparse_, parse_qs as parse_qs_, parse_qsl as parse_qsl_, quote as quote_, unquote as unquote_, quote_plus as quote_plus_, unquote_plus as unquote_plus_, urlencode as urlencode_
 else:
-    from urlparse import urlparse as urlparse_, parse_qs as parse_qs_, parse_qsl as parse_qsl_ #python 2
+    from urlparse import urlparse as urlparse_, parse_qs as parse_qs_, parse_qsl as parse_qsl_
     from urllib import quote as quote_, unquote as unquote_, quote_plus as quote_plus_, unquote_plus as unquote_plus_, urlencode as urlencode_
 import sys
 import os as os_
@@ -44,9 +44,6 @@ os = os_
 if six.PY2:
     reload(sys)
     sys.setdefaultencoding('utf-8')
-
-
-
 
 try:
     class Progress_six:
@@ -109,34 +106,25 @@ def yesno(heading="",message="",nolabel="Nao",yeslabel="Sim"):
         q = dialog_.yesno(heading=heading, message=message, nolabel=nolabel, yeslabel=yeslabel)
     return q        
 
-
 def route(r):
     try:
-        route_decorator = r.split('/')[1] if '/' in r else r
-        
-        # Pega a rota do sys.argv
-        plugin_route = base.split('/')[3:] if len(base.split('/')) > 3 else []
-        route_sys = plugin_route[0] if plugin_route else ''
-        
+        route_decorator = r.split('/')[1]
+        plugin_route = base.split('/')[3:]
+        route_sys = plugin_route[0]
         def decorator(f):
             params = {}
             try:
-                # Verifica se tem query string com ?
-                if len(sys.argv) > 2 and sys.argv[2]:
-                    query_string = sys.argv[2]
-                    if query_string.startswith('?'):
-                        query_string = query_string[1:]
-                    
-                    # Parse dos parâmetros
-                    for param in query_string.split('&'):
-                        if '=' in param:
-                            key, value = param.split('=', 1)
-                            params[unquote_plus(key)] = unquote_plus(value)
-                        elif param:
-                            params[param] = ''
+                param_root = plugin_route[1]
+                for command in param_root.split('&'):
+                    if '=' in command:
+                        split_command = command.split('=', 1)
+                        key = unquote_plus(split_command[0])
+                        value = unquote_plus(split_command[1])
+                        params[key] = value
+                    else:
+                        params[unquote_plus(command)] = ''
             except:
                 pass
-            
             if not route_decorator and not route_sys:
                 try:
                     f(params)
@@ -197,17 +185,14 @@ def log(txt):
 def string_utf8(string):
     if isinstance(string, bytes):
         return string
-
     return string.encode("utf-8", errors="ignore")
 
 def to_unicode(text, encoding='utf-8', errors='strict'):
-    """Force text to unicode"""
     if isinstance(text, bytes):
         return text.decode(encoding, errors=errors)
     return text
 
 def get_search_string(heading='', message=''):
-    """Ask the user for a search string"""
     search_string = None
     keyboard = xbmc.Keyboard(message, heading)
     keyboard.doModal()
@@ -257,12 +242,8 @@ def addMenuItem(params={}, destiny='', folder=True):
     try:
         params.update({'originaltitle': string_utf8(originaltitle)})
     except:
-        pass
-    
-    # CORREÇÃO: Usar urlencode diretamente sem quote_plus adicional
-    # urlencode já faz a codificação correta
-    params_str = urlencode(params)
-    u = 'plugin://%s/%s?%s' % (base.split("/")[2], destiny, params_str)
+        pass               
+    u = 'plugin://%s/%s/%s'%(base.split("/")[2],destiny,urlencode(params))
     
     iconimage = params.get("iconimage", "")
     fanart = params.get("fanart", "")

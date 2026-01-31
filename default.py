@@ -243,11 +243,13 @@ def find_movies():
                     'name': movie_name,
                     'description': '',
                     'iconimage': img,
+                    'fanart': img,
                     'url': '',
                     'imdbnumber': imdb_id,
                     'year': year,
                     'movie_name': movie_name,
-                    'original_name': original_name
+                    'original_name': original_name,
+                    'playable': 'true'
                 }, destiny='/play_resolve_movies', folder=False)
             end()
             setview('List')
@@ -287,10 +289,12 @@ def movies_250(param=None):
                 'name': movie_name,
                 'description': description,
                 'iconimage': image,
+                'fanart': image,
                 'url': '',
                 'imdbnumber': imdb_id,
                 'movie_name': movie_name,
-                'original_name': original_name
+                'original_name': original_name,
+                'playable': 'true'
             }, destiny='/play_resolve_movies', folder=False)
         if end_ < len(all_items):
             addMenuItem({'name': 'Próxima Página', 'page': page + 1}, destiny='/imdb_movies_250')
@@ -337,10 +341,12 @@ def movies_popular(param=None):
                 'name': movie_name,
                 'description': description,
                 'iconimage': image,
+                'fanart': image,
                 'url': '',
                 'imdbnumber': imdb_id,
                 'movie_name': movie_name,
-                'original_name': original_name
+                'original_name': original_name,
+                'playable': 'true'
             }, destiny='/play_resolve_movies', folder=False)
         if end_ < len(all_items):
             addMenuItem({'name': 'Próxima Página', 'page': page + 1}, destiny='/imdb_movies_popular')
@@ -431,6 +437,7 @@ def play_resolve_movies(param):
     stop_player()
     movie_name = param.get('movie_name', param.get('name', ''))
     iconimage = param.get('iconimage', '')
+    fanart = param.get('fanart', '')
     imdb_number = param.get('imdbnumber', '')
     description = param.get('description', '')
     year = param.get('year', '')
@@ -446,7 +453,7 @@ def play_resolve_movies(param):
         is_direct_file = url.lower().endswith(('.mp4', '.mkv', '.avi', '.mov', '.webm', '.ts'))
 
         play_item = xbmcgui.ListItem(path=url)
-        play_item.setArt({'thumb': iconimage, 'icon': iconimage, 'fanart': iconimage})
+        play_item.setArt({'thumb': iconimage, 'icon': iconimage, 'fanart': fanart or iconimage})
         play_item.setContentLookup(False)
 
         if subtitle_url:
@@ -487,7 +494,7 @@ def play_resolve_movies(param):
             play_item.setInfo('video', info_dict)
 
         notify('Escolha o audio portugues nos ajustes')
-        xbmc.Player().play(item=url, listitem=play_item)
+        xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, play_item)
     else:
         notify('Stream Indisponivel')
 

@@ -17,7 +17,7 @@ class VOD:
     def get_last_base(self, url):
         last_url = url
         try:
-            r = requests.get(url, headers=headers, timeout=10)
+            r = requests.get(url, headers=headers)
             last_url = r.url
         except Exception:
             pass
@@ -33,7 +33,6 @@ class VOD:
             r = requests.get(
                 url,
                 headers={**headers, 'sec-fetch-dest': 'iframe'},
-                timeout=15
             )
 
             match = re.search(r'var ALL_EPISODES\s*=\s*(\{.*?\});', r.text, re.DOTALL)
@@ -74,7 +73,6 @@ class VOD:
                     '_token': csrf_token
                 },
                 headers=h,
-                timeout=15
             )
 
             options = r.json().get('data', {}).get('options', [])
@@ -105,7 +103,6 @@ class VOD:
                         '_token': csrf_token
                     },
                     headers=h,
-                    timeout=15
                 )
 
                 video_url = r.json().get('data', {}).get('video_url', '').strip()
@@ -128,7 +125,6 @@ class VOD:
             r = requests.get(
                 url,
                 headers={**headers, 'sec-fetch-dest': 'iframe'},
-                timeout=15
             )
 
             csrf_match = re.search(r'var CSRF_TOKEN\s*=\s*"([^"]+)"', r.text)
@@ -158,7 +154,6 @@ class VOD:
                     '_token': csrf_token
                 },
                 headers=h,
-                timeout=15
             )
 
             options = r.json().get('data', {}).get('options', [])
@@ -189,7 +184,6 @@ class VOD:
                         '_token': csrf_token
                     },
                     headers=h,
-                    timeout=15
                 )
 
                 video_url = r.json().get('data', {}).get('video_url', '').strip()
@@ -220,7 +214,6 @@ class VOD:
                     video_url,
                     headers=headers,
                     allow_redirects=True,
-                    timeout=10
                 )
                 if test.status_code >= 400:
                     return '', None
@@ -244,7 +237,6 @@ class VOD:
             r = requests.get(
                 video_url,
                 headers={**headers, 'sec-fetch-dest': 'iframe'},
-                timeout=10
             )
 
             cookies = r.cookies.get_dict()
@@ -259,7 +251,6 @@ class VOD:
                 },
                 data={'hash': video_hash, 'r': referer_url},
                 cookies=cookies,
-                timeout=10
             )
 
             js = r.json()

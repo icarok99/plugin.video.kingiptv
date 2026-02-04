@@ -11,13 +11,13 @@ headers = {
 
 class VOD:
     def __init__(self):
-        original_base = 'https://superflixapi.asia'
+        original_base = 'https://superflixapi.cv'
         self.base = self.get_last_base(original_base)
 
     def get_last_base(self, url):
         last_url = url
         try:
-            r = requests.get(url, headers=headers)
+            r = requests.get(url, headers=headers, timeout=10)
             last_url = r.url
         except Exception:
             pass
@@ -32,50 +32,66 @@ class VOD:
 
             r = requests.get(
                 url,
-                headers={**headers, 'sec-fetch-dest': 'iframe'}
+                headers={**headers, 'sec-fetch-dest': 'iframe'},
+                timeout=15
             )
 
-            match = re.search(r'var ALL_EPISODES\s*=\s*({.*?});', r.text, re.DOTALL)
+            match = re.search(r'var ALL_EPISODES\s*=\s*(\{.*?\});', r.text, re.DOTALL)
             if not match:
                 return '', None
 
             episodes = json.loads(match.group(1))
-            contentid = next(
-                (
-                    ep['ID']
-                    for ep in episodes.get(str(season), [])
-                    if str(ep.get('epi_num')) == str(episode)
-                ),
-                None
-            )
+            
+            season_episodes = episodes.get(str(season), [])
+            contentid = None
+            
+            for ep in season_episodes:
+                if str(ep.get('epi_num')) == str(episode):
+                    contentid = ep.get('ID')
+                    break
 
             if not contentid:
                 return '', None
 
-            api = f"{self.base}/api"
+            csrf_match = re.search(r'var CSRF_TOKEN\s*=\s*"([^"]+)"', r.text)
+            csrf_token = csrf_match.group(1) if csrf_match else ''
+
+            api_url_options = f"{self.base}/player/options"
+            api_url_source = f"{self.base}/player/source"
+            
             h = {
                 **headers,
                 'origin': self.base,
-                'referer': url
+                'referer': url,
+                'x-requested-with': 'XMLHttpRequest'
             }
 
             r = requests.post(
-                api,
-                data={'action': 'getOptions', 'contentid': contentid},
-                headers=h
+                api_url_options,
+                data={
+                    'contentid': contentid,
+                    'type': 'serie',
+                    '_token': csrf_token
+                },
+                headers=h,
+                timeout=15
             )
 
             options = r.json().get('data', {}).get('options', [])
             if not options:
                 return '', None
 
-            ordered = []
-            if len(options) > 0:
-                ordered.append(options[0])
-            if len(options) > 1:
-                ordered.append(options[1])
-            if len(options) > 2:
-                ordered.extend(options[2:])
+            premium, fast, others = [], [], []
+            for opt in options:
+                opt_id = opt.get('ID', '')
+                if 'premium' in str(opt_id).lower():
+                    premium.append(opt)
+                elif 'fast' in str(opt_id).lower():
+                    fast.append(opt)
+                else:
+                    others.append(opt)
+
+            ordered = premium + fast + others
 
             for opt in ordered:
                 video_id = opt.get('ID')
@@ -83,9 +99,13 @@ class VOD:
                     continue
 
                 r = requests.post(
-                    api,
-                    data={'action': 'getPlayer', 'video_id': video_id},
-                    headers=h
+                    api_url_source,
+                    data={
+                        'video_id': video_id,
+                        '_token': csrf_token
+                    },
+                    headers=h,
+                    timeout=15
                 )
 
                 video_url = r.json().get('data', {}).get('video_url', '').strip()
@@ -107,43 +127,69 @@ class VOD:
 
             r = requests.get(
                 url,
-                headers={**headers, 'sec-fetch-dest': 'iframe'}
+                headers={**headers, 'sec-fetch-dest': 'iframe'},
+                timeout=15
             )
 
-            soup = BeautifulSoup(r.text, "html.parser")
-            btns = soup.find_all("div", class_="btn-server")
-            if not btns:
+            csrf_match = re.search(r'var CSRF_TOKEN\s*=\s*"([^"]+)"', r.text)
+            csrf_token = csrf_match.group(1) if csrf_match else ''
+
+            content_id_match = re.search(r'var INITIAL_CONTENT_ID\s*=\s*(\d+)', r.text)
+            if not content_id_match:
                 return '', None
+            
+            content_id = content_id_match.group(1)
 
-            premium, fast, others = [], [], []
-
-            for b in btns:
-                t = b.get_text(strip=True).lower()
-                if 'premium' in t:
-                    premium.append(b)
-                elif 'fast' in t:
-                    fast.append(b)
-                else:
-                    others.append(b)
-
-            btns = premium + fast + others
-
-            api = f"{self.base}/api"
+            api_url_options = f"{self.base}/player/options"
+            api_url_source = f"{self.base}/player/source"
+            
             h = {
                 **headers,
                 'origin': self.base,
-                'referer': url
+                'referer': url,
+                'x-requested-with': 'XMLHttpRequest'
             }
 
-            for b in btns:
-                video_id = b.get('data-id')
+            r = requests.post(
+                api_url_options,
+                data={
+                    'contentid': content_id,
+                    'type': 'filme',
+                    '_token': csrf_token
+                },
+                headers=h,
+                timeout=15
+            )
+
+            options = r.json().get('data', {}).get('options', [])
+            if not options:
+                return '', None
+
+            premium, fast, others = [], [], []
+            for opt in options:
+                opt_id = str(opt.get('ID', ''))
+                if 'premium' in opt_id.lower():
+                    premium.append(opt)
+                elif 'fast' in opt_id.lower():
+                    fast.append(opt)
+                else:
+                    others.append(opt)
+
+            ordered = premium + fast + others
+
+            for opt in ordered:
+                video_id = opt.get('ID')
                 if not video_id:
                     continue
 
                 r = requests.post(
-                    api,
-                    data={'action': 'getPlayer', 'video_id': video_id},
-                    headers=h
+                    api_url_source,
+                    data={
+                        'video_id': video_id,
+                        '_token': csrf_token
+                    },
+                    headers=h,
+                    timeout=15
                 )
 
                 video_url = r.json().get('data', {}).get('video_url', '').strip()
@@ -173,7 +219,8 @@ class VOD:
                 test = requests.head(
                     video_url,
                     headers=headers,
-                    allow_redirects=True
+                    allow_redirects=True,
+                    timeout=10
                 )
                 if test.status_code >= 400:
                     return '', None
@@ -196,7 +243,8 @@ class VOD:
 
             r = requests.get(
                 video_url,
-                headers={**headers, 'sec-fetch-dest': 'iframe'}
+                headers={**headers, 'sec-fetch-dest': 'iframe'},
+                timeout=10
             )
 
             cookies = r.cookies.get_dict()
@@ -210,7 +258,8 @@ class VOD:
                     'User-Agent': headers['User-Agent']
                 },
                 data={'hash': video_hash, 'r': referer_url},
-                cookies=cookies
+                cookies=cookies,
+                timeout=10
             )
 
             js = r.json()

@@ -451,6 +451,9 @@ def play_resolve_movies(param):
         play_item = xbmcgui.ListItem(path=url)
         play_item.setArt({'thumb': iconimage, 'icon': iconimage, 'fanart': iconimage})
         play_item.setContentLookup(False)
+        play_item.setProperty('inputstream', 'inputstream.adaptive')
+        play_item.setProperty('inputstream.adaptive.original_audio_language', 'pt')
+        play_item.setMimeType('application/vnd.apple.mpegurl')
 
         if headers:
             play_item.setProperty('inputstream.adaptive.stream_headers', headers)
@@ -505,6 +508,9 @@ def play_resolve_series(param):
         play_item = xbmcgui.ListItem(path=url)
         play_item.setArt({'thumb': iconimage, 'icon': iconimage, 'fanart': fanart or iconimage})
         play_item.setContentLookup(False)
+        play_item.setProperty('inputstream', 'inputstream.adaptive')
+        play_item.setProperty('inputstream.adaptive.original_audio_language', 'pt')
+        play_item.setMimeType('application/vnd.apple.mpegurl')
 
         if headers:
             play_item.setProperty('inputstream.adaptive.stream_headers', headers)

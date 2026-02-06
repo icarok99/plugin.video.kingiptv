@@ -1,230 +1,236 @@
 # -*- coding: utf-8 -*-
+try:
+    from lib.helper import *
+except:
+    from helper import *
+
 import re
 import json
 import requests
 from urllib.parse import urlparse, urlencode, quote_plus
-from bs4 import BeautifulSoup
 
 headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:141.0) Gecko/20100101 Firefox/141.0'
 }
 
+
 class VOD:
     def __init__(self):
-        original_base = 'https://superflixapi.asia'
+        original_base = 'https://superflixapi.cv'
         self.base = self.get_last_base(original_base)
 
     def get_last_base(self, url):
         last_url = url
         try:
-            r = requests.get(url, headers=headers)
+            r = requests.get(url, headers=headers, timeout=4)
             last_url = r.url
-        except Exception:
+        except:
             pass
 
         if last_url and last_url.endswith('/'):
             last_url = last_url[:-1]
         return last_url
 
-    def tvshows(self, imdb, season, episode):
+    def movie(self, imdb):
+        stream = ''
         try:
-            url = f'{self.base}/serie/{imdb}/{season}/{episode}'
+            url = f'{self.base}/filme/{imdb}'
+            r_ = urlparse(url)._replace(path='', query='', fragment='').geturl() + '/'
 
-            r = requests.get(
-                url,
-                headers={**headers, 'sec-fetch-dest': 'iframe'}
-            )
+            headers_ = headers.copy()
+            headers_.update({'sec-fetch-dest': 'iframe'})
 
-            match = re.search(r'var ALL_EPISODES\s*=\s*({.*?});', r.text, re.DOTALL)
-            if not match:
-                return '', None
+            r = requests.get(url, headers=headers_)
+            html = r.text
 
-            episodes = json.loads(match.group(1))
-            contentid = next(
-                (
-                    ep['ID']
-                    for ep in episodes.get(str(season), [])
-                    if str(ep.get('epi_num')) == str(episode)
-                ),
-                None
-            )
+            csrf_match = re.search(r'(?:var|let|const)\s+CSRF_TOKEN\s*=\s*[\'"]([^\'"]+)', html)
+            csrf = csrf_match.group(1) if csrf_match else ''
 
-            if not contentid:
-                return '', None
+            page_match = re.search(r'(?:var|let|const)\s+PAGE_TOKEN\s*=\s*[\'"]([^\'"]+)', html)
+            page_token = page_match.group(1) if page_match else ''
 
-            api = f"{self.base}/api"
-            h = {
-                **headers,
+            content_match = re.search(r'(?:var|let|const)\s+INITIAL_CONTENT_ID\s*=\s*(\d+)', html)
+            if not content_match:
+                return ''
+
+            contentid = content_match.group(1)
+
+            headers_.pop('sec-fetch-dest', None)
+            headers_.update({
                 'origin': self.base,
-                'referer': url
-            }
+                'referer': url,
+                'x-requested-with': 'XMLHttpRequest',
+                'X-Page-Token': page_token
+            })
 
             r = requests.post(
-                api,
-                data={'action': 'getOptions', 'contentid': contentid},
-                headers=h
+                f'{self.base}/player/options',
+                data={
+                    'contentid': contentid,
+                    'type': 'filme',
+                    '_token': csrf,
+                    'page_token': page_token,
+                    'pageToken': page_token
+                },
+                headers=headers_
             )
 
             options = r.json().get('data', {}).get('options', [])
             if not options:
-                return '', None
+                return ''
 
-            ordered = []
-            if len(options) > 0:
-                ordered.append(options[0])
-            if len(options) > 1:
-                ordered.append(options[1])
-            if len(options) > 2:
-                ordered.extend(options[2:])
+            video_id = options[0]['ID']
 
-            for opt in ordered:
-                video_id = opt.get('ID')
-                if not video_id:
-                    continue
-
-                r = requests.post(
-                    api,
-                    data={'action': 'getPlayer', 'video_id': video_id},
-                    headers=h
-                )
-
-                video_url = r.json().get('data', {}).get('video_url', '').strip()
-                if not video_url:
-                    continue
-
-                resolved_video, resolved_sub = self._resolve_video_url(video_url, url)
-                if resolved_video:
-                    return resolved_video, resolved_sub
-
-            return '', None
-
-        except Exception:
-            return '', None
-
-    def movie(self, imdb):
-        try:
-            url = f'{self.base}/filme/{imdb}'
-
-            r = requests.get(
-                url,
-                headers={**headers, 'sec-fetch-dest': 'iframe'}
+            r = requests.post(
+                f'{self.base}/player/source',
+                data={
+                    'video_id': video_id,
+                    '_token': csrf,
+                    'page_token': page_token
+                },
+                headers=headers_
             )
 
-            soup = BeautifulSoup(r.text, "html.parser")
-            btns = soup.find_all("div", class_="btn-server")
-            if not btns:
-                return '', None
+            video_url = r.json()['data']['video_url']
 
-            premium, fast, others = [], [], []
-
-            for b in btns:
-                t = b.get_text(strip=True).lower()
-                if 'premium' in t:
-                    premium.append(b)
-                elif 'fast' in t:
-                    fast.append(b)
-                else:
-                    others.append(b)
-
-            btns = premium + fast + others
-
-            api = f"{self.base}/api"
-            h = {
-                **headers,
-                'origin': self.base,
-                'referer': url
-            }
-
-            for b in btns:
-                video_id = b.get('data-id')
-                if not video_id:
-                    continue
-
-                r = requests.post(
-                    api,
-                    data={'action': 'getPlayer', 'video_id': video_id},
-                    headers=h
-                )
-
-                video_url = r.json().get('data', {}).get('video_url', '').strip()
-                if not video_url:
-                    continue
-
-                resolved_video, resolved_sub = self._resolve_video_url(video_url, url)
-                if resolved_video:
-                    return resolved_video, resolved_sub
-
-            return '', None
-
-        except Exception:
-            return '', None
-
-    def _extract_subtitle(self, video_url):
-        subtitle = None
-        if '?s=' in video_url:
-            video_url, subtitle = video_url.split('?s=', 1)
-        return video_url.strip(), subtitle
-
-    def _resolve_video_url(self, video_url, referer_url):
-        video_url, subtitle = self._extract_subtitle(video_url)
-
-        if re.search(r'\.(mp4|m3u8|ts|mpegurl)(\?|#|$)', video_url, re.I):
-            try:
-                test = requests.head(
-                    video_url,
-                    headers=headers,
-                    allow_redirects=True
-                )
-                if test.status_code >= 400:
-                    return '', None
-            except Exception:
-                return '', None
-
-            play_url = (
-                f"{video_url}"
-                f"|User-Agent={quote_plus(headers['User-Agent'])}"
-                f"&Referer={quote_plus(self.base)}"
-            )
-
-            return play_url, subtitle
-
-        try:
-            video_hash = video_url.strip("/").split("/")[-1]
-            parsed = urlparse(video_url)
-            origin = f"{parsed.scheme}://{parsed.netloc}"
-            player = f"{origin}/player/index.php?data={video_hash}&do=getVideo"
-
-            r = requests.get(
+            r_redirect = requests.get(
                 video_url,
-                headers={**headers, 'sec-fetch-dest': 'iframe'}
+                headers={'User-Agent': headers['User-Agent'], 'sec-fetch-dest': 'iframe'},
+                allow_redirects=True
             )
 
-            cookies = r.cookies.get_dict()
+            final_video_page = r_redirect.url
+
+            video_hash = final_video_page.strip('/').split('/')[-1]
+
+            parsed = urlparse(final_video_page)
+            origin = f'{parsed.scheme}://{parsed.netloc}'
+            player = f'{origin}/player/index.php?data={video_hash}&do=getVideo'
+
+            cookies = r_redirect.cookies.get_dict()
+            cookie_str = urlencode(cookies)
 
             r = requests.post(
                 player,
                 headers={
                     'Origin': origin,
-                    'Referer': video_url,
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'User-Agent': headers['User-Agent']
+                    'x-requested-with': 'XMLHttpRequest'
                 },
-                data={'hash': video_hash, 'r': referer_url},
+                data={'hash': video_hash, 'r': r_},
                 cookies=cookies
             )
 
-            js = r.json()
-            if js.get("videoSource"):
-                play_url = (
-                    f"{js['videoSource']}"
-                    f"|User-Agent={quote_plus(headers['User-Agent'])}"
-                    f"&Cookie={quote_plus(urlencode(cookies))}"
-                    f"&Referer={quote_plus(origin)}"
-                )
+            src = r.json()
+            stream = src['videoSource'] + '|User-Agent=' + quote_plus(headers['User-Agent']) + '&Cookie=' + quote_plus(cookie_str)
 
-                return play_url, subtitle
-
-        except Exception:
+        except:
             pass
 
-        return '', None
+        return stream
+
+    def tvshows(self, imdb, season, episode):
+        stream = ''
+        try:
+            url = f'{self.base}/serie/{imdb}/{season}/{episode}'
+            r_ = urlparse(url)._replace(path='', query='', fragment='').geturl() + '/'
+
+            headers_ = headers.copy()
+            headers_.update({'sec-fetch-dest': 'iframe'})
+
+            r = requests.get(url, headers=headers_)
+            html = r.text
+
+            m = re.search(r'(?:var|let|const)\s+ALL_EPISODES\s*=\s*({.*?});', html, re.DOTALL)
+            if not m:
+                return ''
+
+            all_episodes = json.loads(m.group(1))
+            episodes = all_episodes.get(str(season), [])
+
+            contentid = None
+            for ep in episodes:
+                if str(ep.get('epi_num')) == str(episode):
+                    contentid = ep['ID']
+                    break
+
+            if not contentid:
+                return ''
+
+            csrf_match = re.search(r'(?:var|let|const)\s+CSRF_TOKEN\s*=\s*[\'"]([^\'"]+)', html)
+            csrf = csrf_match.group(1) if csrf_match else ''
+
+            page_match = re.search(r'(?:var|let|const)\s+PAGE_TOKEN\s*=\s*[\'"]([^\'"]+)', html)
+            page_token = page_match.group(1) if page_match else ''
+
+            headers_.pop('sec-fetch-dest', None)
+            headers_.update({
+                'origin': self.base,
+                'referer': url,
+                'x-requested-with': 'XMLHttpRequest',
+                'X-Page-Token': page_token
+            })
+
+            r = requests.post(
+                f'{self.base}/player/options',
+                data={
+                    'contentid': contentid,
+                    'type': 'serie',
+                    '_token': csrf,
+                    'page_token': page_token,
+                    'pageToken': page_token
+                },
+                headers=headers_
+            )
+
+            options = r.json().get('data', {}).get('options', [])
+            if not options:
+                return ''
+
+            video_id = options[0]['ID']
+
+            r = requests.post(
+                f'{self.base}/player/source',
+                data={
+                    'video_id': video_id,
+                    '_token': csrf,
+                    'page_token': page_token
+                },
+                headers=headers_
+            )
+
+            video_url = r.json()['data']['video_url']
+
+            r_redirect = requests.get(
+                video_url,
+                headers={'User-Agent': headers['User-Agent'], 'sec-fetch-dest': 'iframe'},
+                allow_redirects=True
+            )
+
+            final_video_page = r_redirect.url
+
+            video_hash = final_video_page.strip('/').split('/')[-1]
+
+            parsed = urlparse(final_video_page)
+            origin = f'{parsed.scheme}://{parsed.netloc}'
+            player = f'{origin}/player/index.php?data={video_hash}&do=getVideo'
+
+            cookies = r_redirect.cookies.get_dict()
+            cookie_str = urlencode(cookies)
+
+            r = requests.post(
+                player,
+                headers={
+                    'Origin': origin,
+                    'x-requested-with': 'XMLHttpRequest'
+                },
+                data={'hash': video_hash, 'r': r_},
+                cookies=cookies
+            )
+
+            src = r.json()
+            stream = src['videoSource'] + '|User-Agent=' + quote_plus(headers['User-Agent']) + '&Cookie=' + quote_plus(cookie_str)
+
+        except:
+            pass
+
+        return stream

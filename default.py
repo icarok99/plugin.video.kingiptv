@@ -475,7 +475,8 @@ def play_resolve_movies(param):
                 'originaltitle': original_name
             })
 
-        xbmc.Player().play(item=url, listitem=play_item)
+        notify('Escolha o audio portugues nos ajustes')
+        xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, play_item)
     else:
         notify('Stream Indisponivel')
 
@@ -528,6 +529,7 @@ def play_resolve_series(param):
                 'mediatype': 'episode'
             })
 
+        notify('Escolha o audio portugues nos ajustes')
         xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, play_item)
     else:
         notify('Stream Indisponivel')

@@ -437,41 +437,26 @@ def play_resolve_movies(param):
     stop_player()
     movie_name = param.get('movie_name', param.get('name', ''))
     iconimage = param.get('iconimage', '')
-    fanart = param.get('fanart', '')
     imdb_number = param.get('imdbnumber', '')
     description = param.get('description', '')
     year = param.get('year', '')
     original_name = param.get('original_name', '')
 
-    result = api_vod.VOD().movie(imdb_number)
-    if result and result[0]:
-        stream, subtitle_url = result
+    stream = api_vod.VOD().movie(imdb_number)
 
+    if stream:
         url = stream.split('|')[0] if '|' in stream else stream
         headers = stream.split('|', 1)[1] if '|' in stream else ''
 
-        is_direct_file = url.lower().endswith(('.mp4', '.mkv', '.avi', '.mov', '.webm', '.ts'))
-
         play_item = xbmcgui.ListItem(path=url)
-        play_item.setArt({'thumb': iconimage, 'icon': iconimage, 'fanart': fanart or iconimage})
+        play_item.setArt({'thumb': iconimage, 'icon': iconimage, 'fanart': iconimage})
         play_item.setContentLookup(False)
 
-        if subtitle_url:
-            play_item.setSubtitles([subtitle_url])
-
-        if is_direct_file:
-            play_item.setMimeType('video/mp4')
-            if headers:
-                url_with_headers = f"{url}|{headers}&User-Agent=Mozilla/5.0&Referer=https://google.com"
-                play_item = xbmcgui.ListItem(path=url_with_headers)
-        else:
-            play_item.setProperty('inputstream', 'inputstream.adaptive')
-            play_item.setProperty('inputstream.adaptive.manifest_type', 'hls')
-            play_item.setProperty('inputstream.adaptive.original_audio_language', 'pt')
-            if headers:
-                play_item.setProperty('inputstream.adaptive.stream_headers', headers)
+        if headers:
+            play_item.setProperty('inputstream.adaptive.stream_headers', headers)
 
         kodi_version = int(xbmc.getInfoLabel('System.BuildVersion').split('.')[0])
+
         if kodi_version >= 20:
             info_tag = play_item.getVideoInfoTag()
             info_tag.setTitle(movie_name)
@@ -482,19 +467,15 @@ def play_resolve_movies(param):
             if year:
                 info_tag.setYear(int(year))
         else:
-            info_dict = {
+            play_item.setInfo('video', {
                 'title': movie_name,
                 'plot': description,
                 'imdbnumber': imdb_number,
                 'mediatype': 'movie',
                 'originaltitle': original_name
-            }
-            if year:
-                info_dict['year'] = int(year)
-            play_item.setInfo('video', info_dict)
+            })
 
-        notify('Escolha o audio portugues nos ajustes')
-        xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, play_item)
+        xbmc.Player().play(item=url, listitem=play_item)
     else:
         notify('Stream Indisponivel')
 
@@ -512,14 +493,11 @@ def play_resolve_series(param):
     imdb_number = param.get('imdbnumber', '')
     description = param.get('description', '')
 
-    result = api_vod.VOD().tvshows(imdb_number, season, episode)
-    if result and result[0]:
-        stream, subtitle_url = result
+    stream = api_vod.VOD().tvshows(imdb_number, season, episode)
 
+    if stream:
         url = stream.split('|')[0] if '|' in stream else stream
         headers = stream.split('|', 1)[1] if '|' in stream else ''
-
-        is_direct_file = url.lower().endswith(('.mp4', '.mkv', '.avi', '.mov', '.webm', '.ts'))
 
         display_title = episode_title if episode_title else f'S{season}E{episode.zfill(2)}'
 
@@ -527,22 +505,11 @@ def play_resolve_series(param):
         play_item.setArt({'thumb': iconimage, 'icon': iconimage, 'fanart': fanart or iconimage})
         play_item.setContentLookup(False)
 
-        if subtitle_url:
-            play_item.setSubtitles([subtitle_url])
-
-        if is_direct_file:
-            play_item.setMimeType('video/mp4')
-            if headers:
-                url_with_headers = f"{url}|{headers}&User-Agent=Mozilla/5.0&Referer=https://google.com"
-                play_item = xbmcgui.ListItem(path=url_with_headers)
-        else:
-            play_item.setProperty('inputstream', 'inputstream.adaptive')
-            play_item.setProperty('inputstream.adaptive.manifest_type', 'hls')
-            play_item.setProperty('inputstream.adaptive.original_audio_language', 'pt')
-            if headers:
-                play_item.setProperty('inputstream.adaptive.stream_headers', headers)
+        if headers:
+            play_item.setProperty('inputstream.adaptive.stream_headers', headers)
 
         kodi_version = int(xbmc.getInfoLabel('System.BuildVersion').split('.')[0])
+
         if kodi_version >= 20:
             info_tag = play_item.getVideoInfoTag()
             info_tag.setTitle(display_title)
@@ -552,17 +519,15 @@ def play_resolve_series(param):
             info_tag.setIMDBNumber(imdb_number)
             info_tag.setMediaType('episode')
         else:
-            info_dict = {
+            play_item.setInfo('video', {
                 'title': display_title,
                 'tvshowtitle': serie_name,
                 'originaltitle': original_name,
                 'plot': description,
                 'imdbnumber': imdb_number,
                 'mediatype': 'episode'
-            }
-            play_item.setInfo('video', info_dict)
+            })
 
-        notify('Escolha o audio portugues nos ajustes')
         xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, play_item)
     else:
         notify('Stream Indisponivel')

@@ -1,0 +1,344 @@
+# -*- coding: utf-8 -*-
+
+import xbmc
+import xbmcgui
+import threading
+import time
+from datetime import datetime
+
+class UpNextDialog(xbmcgui.WindowXMLDialog):
+    
+    BUTTON_PLAY_NOW = 3001
+    BUTTON_CANCEL = 3002
+    LABEL_NEXT_EPISODE = 3003
+    IMAGE_THUMBNAIL = 3004
+    PROGRESS_BAR = 3005
+    
+    def __init__(self, *args, **kwargs):
+        self.next_episode_info = kwargs.get('next_episode_info', {})
+        self.callback = kwargs.get('callback', None)
+        self.countdown_seconds = kwargs.get('countdown_seconds', 10)
+        self.auto_play = False
+        self.cancelled = False
+        self.countdown_thread = None
+        self._stop_countdown = False
+        
+    def onInit(self):
+        try:
+            serie_name = self.next_episode_info.get('serie_name', '')
+            next_season = self.next_episode_info.get('next_season', 0)
+            next_episode = self.next_episode_info.get('next_episode', 0)
+            episode_title = self.next_episode_info.get('episode_title', '')
+            thumbnail = self.next_episode_info.get('thumbnail', '')
+            
+            next_text = '{}x{:02d}'.format(next_season, next_episode)
+            if episode_title:
+                next_text += ' - {}'.format(episode_title)
+            
+            self.getControl(self.LABEL_NEXT_EPISODE).setLabel(next_text)
+            
+            if thumbnail:
+                self.getControl(self.IMAGE_THUMBNAIL).setImage(thumbnail)
+            
+            self._start_countdown()
+            
+        except Exception as e:
+            xbmc.log('KING IPTV UpNext - Erro no onInit: {}'.format(str(e)), xbmc.LOGERROR)
+    
+    def _start_countdown(self):
+        self._stop_countdown = False
+        self.countdown_thread = threading.Thread(target=self._countdown_loop)
+        self.countdown_thread.daemon = True
+        self.countdown_thread.start()
+    
+    def _countdown_loop(self):
+        remaining = self.countdown_seconds
+        
+        while remaining > 0 and not self._stop_countdown:
+            try:
+                progress = int(((self.countdown_seconds - remaining) / float(self.countdown_seconds)) * 100)
+                self.getControl(self.PROGRESS_BAR).setPercent(progress)
+                
+                self.getControl(self.BUTTON_PLAY_NOW).setLabel('Reproduzir ({}s)'.format(remaining))
+                
+                time.sleep(1)
+                remaining -= 1
+                
+            except Exception as e:
+                xbmc.log('KING IPTV UpNext - Erro no countdown: {}'.format(str(e)), xbmc.LOGERROR)
+                break
+        
+        if not self._stop_countdown and remaining == 0:
+            self.auto_play = True
+            self.close()
+    
+    def onClick(self, controlId):
+        if controlId == self.BUTTON_PLAY_NOW:
+            self.auto_play = True
+            self._stop_countdown = True
+            self.close()
+            
+        elif controlId == self.BUTTON_CANCEL:
+            self.cancelled = True
+            self._stop_countdown = True
+            self.close()
+    
+    def onAction(self, action):
+        if action.getId() in (xbmcgui.ACTION_NAV_BACK, xbmcgui.ACTION_PREVIOUS_MENU):
+            self.cancelled = True
+            self._stop_countdown = True
+            self.close()
+
+
+class UpNextService:
+    
+    def __init__(self, player, database):
+        self.player = player
+        self.db = database
+        
+        import xbmcaddon
+        addon = xbmcaddon.Addon()
+        
+        self.enabled = addon.getSettingBool('upnext_enabled') if hasattr(addon, 'getSettingBool') else True
+        self.countdown_seconds = addon.getSettingInt('upnext_countdown_seconds') if hasattr(addon, 'getSettingInt') else 10
+        self.trigger_seconds = addon.getSettingInt('upnext_trigger_seconds') if hasattr(addon, 'getSettingInt') else 30
+        
+        if self.countdown_seconds == 0:
+            self.countdown_seconds = 10
+        if self.trigger_seconds == 0:
+            self.trigger_seconds = 30
+            
+        self.monitoring = False
+        self.monitor_thread = None
+        self._stop_monitoring = False
+        
+        xbmc.log('KING IPTV UpNext - Inicializado com: enabled={}, countdown={}s, trigger={}s'.format(
+            self.enabled, self.countdown_seconds, self.trigger_seconds
+        ), xbmc.LOGINFO)
+        
+    def start_monitoring(self, imdb_id, season, episode):
+        if not self.enabled:
+            xbmc.log('KING IPTV UpNext - Serviço desabilitado', xbmc.LOGDEBUG)
+            return
+        
+        next_metadata = self._find_next_episode(imdb_id, season, episode)
+        
+        if not next_metadata:
+            xbmc.log('KING IPTV UpNext - Não há próximo episódio após S{}E{}'.format(
+                season, episode
+            ), xbmc.LOGDEBUG)
+            return
+        
+        watching = self.db.get_episode_watching(imdb_id)
+        serie_name = watching.get('serie_name', '') if watching else ''
+        original_name = watching.get('original_name', '') if watching else ''
+        
+        next_info = {
+            'imdb_id': imdb_id,
+            'serie_name': serie_name or next_metadata.get('serie_name', ''),
+            'original_name': original_name or next_metadata.get('original_name', ''),
+            'next_season': next_metadata.get('season'),
+            'next_episode': next_metadata.get('episode'),
+            'episode_title': next_metadata.get('episode_title', ''),
+            'thumbnail': next_metadata.get('thumbnail', ''),
+            'fanart': next_metadata.get('fanart', ''),
+            'description': next_metadata.get('description', '')
+        }
+        
+        xbmc.log('KING IPTV UpNext - Iniciando monitoramento para próximo: S{}E{}'.format(
+            next_info['next_season'], next_info['next_episode']
+        ), xbmc.LOGINFO)
+        
+        self._stop_monitoring = False
+        self.monitoring = True
+        self.monitor_thread = threading.Thread(
+            target=self._monitor_playback,
+            args=(next_info,)
+        )
+        self.monitor_thread.daemon = True
+        self.monitor_thread.start()
+    
+    def _find_next_episode(self, imdb_id, current_season, current_episode):
+        try:
+            next_in_season = self.db.get_episode_metadata(imdb_id, current_season, current_episode + 1)
+            if next_in_season:
+                xbmc.log('KING IPTV UpNext - Próximo episódio encontrado: S{}E{}'.format(
+                    current_season, current_episode + 1
+                ), xbmc.LOGINFO)
+                return next_in_season
+            
+            next_season_ep = self.db.get_episode_metadata(imdb_id, current_season + 1, 1)
+            if next_season_ep:
+                xbmc.log('KING IPTV UpNext - Próximo episódio encontrado: S{}E1'.format(
+                    current_season + 1
+                ), xbmc.LOGINFO)
+                return next_season_ep
+            
+            from lib.database import KingDatabase
+            with self.db._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    SELECT * FROM episodes_metadata
+                    WHERE imdb_id = ?
+                        AND (season > ? OR (season = ? AND episode > ?))
+                    ORDER BY season ASC, episode ASC
+                    LIMIT 1
+                ''', (imdb_id, current_season, current_season, current_episode))
+                
+                row = cursor.fetchone()
+                if row:
+                    result = dict(row)
+                    xbmc.log('KING IPTV UpNext - Próximo episódio encontrado (busca genérica): S{}E{}'.format(
+                        result['season'], result['episode']
+                    ), xbmc.LOGINFO)
+                    return result
+            
+            return None
+            
+        except Exception as e:
+            xbmc.log('KING IPTV UpNext - Erro ao buscar próximo episódio: {}'.format(str(e)), xbmc.LOGERROR)
+            import traceback
+            xbmc.log(traceback.format_exc(), xbmc.LOGERROR)
+            return None
+    
+    def _monitor_playback(self, next_info):
+        monitor = xbmc.Monitor()
+        upnext_shown = False
+        
+        xbmc.log('KING IPTV UpNext - Thread de monitoramento iniciada', xbmc.LOGINFO)
+        
+        for _ in range(60):
+            if self.player.isPlayingVideo():
+                break
+            if monitor.waitForAbort(0.5) or self._stop_monitoring:
+                return
+        
+        if not self.player.isPlayingVideo():
+            xbmc.log('KING IPTV UpNext - Ainda não está tocando após longa espera', xbmc.LOGWARNING)
+            return
+        
+        total_time = 0
+        for _ in range(30):
+            try:
+                total_time = self.player.getTotalTime()
+                if total_time > 60:
+                    break
+            except:
+                pass
+            monitor.waitForAbort(0.5)
+        
+        if total_time <= 60:
+            xbmc.log('KING IPTV UpNext - total_time inválido ({}) → abortando'.format(int(total_time)), xbmc.LOGWARNING)
+            return
+        
+        xbmc.log('KING IPTV UpNext - Total time: {}s, trigger: {}s antes do fim'.format(
+            int(total_time), self.trigger_seconds
+        ), xbmc.LOGINFO)
+        
+        while self.player.isPlayingVideo() and not self._stop_monitoring:
+            try:
+                current_time = self.player.getTime()
+                remaining_time = total_time - current_time
+                
+                if remaining_time <= self.trigger_seconds and not upnext_shown:
+                    xbmc.log('KING IPTV UpNext - Exibindo dialog (faltam {}s)'.format(
+                        int(remaining_time)
+                    ), xbmc.LOGINFO)
+                    
+                    upnext_shown = True
+                    should_play_next = self._show_upnext_dialog(next_info)
+                    
+                    self.player.stop()
+                    
+                    if should_play_next:
+                        xbmc.log('KING IPTV UpNext - Usuário optou por reproduzir próximo episódio', xbmc.LOGINFO)
+                        xbmc.sleep(500)
+                        self._play_next_episode(next_info)
+                    else:
+                        xbmc.log('KING IPTV UpNext - Usuário cancelou reprodução', xbmc.LOGINFO)
+                    
+                    break
+                
+                if monitor.waitForAbort(1):
+                    break
+                    
+            except Exception as e:
+                xbmc.log('KING IPTV UpNext - Erro no monitoramento: {}'.format(str(e)), xbmc.LOGERROR)
+                break
+        
+        self.monitoring = False
+        xbmc.log('KING IPTV UpNext - Monitoramento finalizado', xbmc.LOGINFO)
+    
+    def _show_upnext_dialog(self, next_info):
+        try:
+            import xbmcaddon
+            addon = xbmcaddon.Addon()
+            
+            dialog = UpNextDialog(
+                'upnext-dialog.xml',
+                addon.getAddonInfo('path'),
+                'default',
+                '1080i',
+                next_episode_info=next_info,
+                countdown_seconds=self.countdown_seconds
+            )
+            dialog.doModal()
+            
+            result = dialog.auto_play and not dialog.cancelled
+            del dialog
+            return result
+                
+        except Exception as e:
+            xbmc.log('KING IPTV UpNext - Erro ao exibir dialog: {}'.format(str(e)), xbmc.LOGERROR)
+            import traceback
+            xbmc.log(traceback.format_exc(), xbmc.LOGERROR)
+            return False
+    
+    def _play_next_episode(self, next_info):
+        try:
+            try:
+                from urllib import urlencode
+            except ImportError:
+                from urllib.parse import urlencode
+            
+            params = {
+                'serie_name': next_info.get('serie_name', ''),
+                'original_name': next_info.get('original_name', ''),
+                'season_num': str(next_info.get('next_season', 1)),
+                'episode_num': str(next_info.get('next_episode', 1)),
+                'episode_title': next_info.get('episode_title', ''),
+                'iconimage': next_info.get('thumbnail', ''),
+                'fanart': next_info.get('fanart', ''),
+                'imdbnumber': next_info.get('imdb_id', ''),
+                'description': next_info.get('description', ''),
+                'from_upnext': 'true'
+            }
+            
+            plugin_url = 'plugin://plugin.video.kingiptv/play_resolve_series/{}'.format(urlencode(params))
+            
+            xbmc.log('KING IPTV UpNext - Reproduzindo URL: {}'.format(plugin_url), xbmc.LOGINFO)
+            
+            xbmc.executebuiltin('PlayMedia({})'.format(plugin_url))
+            
+        except Exception as e:
+            xbmc.log('KING IPTV UpNext - Erro ao reproduzir próximo episódio: {}'.format(str(e)), xbmc.LOGERROR)
+            import traceback
+            xbmc.log(traceback.format_exc(), xbmc.LOGERROR)
+    
+    def stop_monitoring(self):
+        self._stop_monitoring = True
+        self.monitoring = False
+        xbmc.log('KING IPTV UpNext - Monitoramento parado', xbmc.LOGDEBUG)
+    
+    def is_monitoring(self):
+        return self.monitoring
+
+
+_upnext_service = None
+
+
+def get_upnext_service(player, database):
+    global _upnext_service
+    if _upnext_service is None:
+        _upnext_service = UpNextService(player, database)
+    return _upnext_service

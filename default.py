@@ -1,20 +1,22 @@
 # -*- coding: utf-8 -*-
 import os
 import time
+import json
 from lib.helper import *
 import inputstreamhelper
 from lib import xtream, tunein, pluto, imdb, api_vod, hlsretry
 
-profile = xbmcvfs.translatePath('special://profile/addon_data/plugin.video.kingiptv')
+try:
+    from urllib import urlencode
+except ImportError:
+    from urllib.parse import urlencode
 
-def stop_player():
-    try:
-        player = xbmc.Player()
-        if player.isPlaying():
-            player.stop()
-            xbmc.sleep(300)
-    except:
-        pass
+from lib.player import start_tracking_episode
+from lib.database import KingDatabase
+
+db = KingDatabase()
+
+profile = xbmcvfs.translatePath('special://profile/addon_data/plugin.video.kingiptv')
 
 try:
     import github_update
@@ -29,7 +31,7 @@ try:
             with open(UPDATE_CHECK_FILE, 'r') as f:
                 return datetime.strptime(f.read().strip(), '%d-%m-%Y')
         except:
-            return datetime.strptime('25-01-2026', '%d-%m-%Y')
+            return datetime.strptime('07-02-2026', '%d-%m-%Y')
 
     def save_local_date(date_str):
         with open(UPDATE_CHECK_FILE, 'w') as f:
@@ -82,8 +84,14 @@ def index():
     addMenuItem({'name': 'RADIOS', 'description': ''}, destiny='/radios')
     addMenuItem({'name': 'IMDB Filmes', 'description': ''}, destiny='/imdb_movies')
     addMenuItem({'name': 'IMDB Series', 'description': ''}, destiny='/imdb_series')
+    addMenuItem({'name': 'Configurações'}, destiny='/settings')
     end()
     setview('WideList')
+
+@route('/settings')
+def settings():
+    addon = xbmcaddon.Addon()
+    addon.openSettings()
 
 @route('/playlistiptv')
 def playlistiptv(): 
@@ -95,7 +103,7 @@ def playlistiptv():
         end()
         setview('WideList') 
     else:
-        notify('Sem lista iptv') 
+        notify('Sem lista iptv')
 
 @route('/cat_channels')
 def cat_channels(param):
@@ -139,7 +147,7 @@ def open_channels(param):
         setcontent('videos')
         for i in open_:
             name,link,thumb,desc = i
-            addMenuItem({'name': name, 'description': desc, 'iconimage': thumb, 'url': link}, destiny='/play_iptv', folder=False)
+            addMenuItem({'name': name, 'description': desc, 'iconimage': thumb, 'url': link}, destiny='/play_iptv')
         end()
         setview('WideList')
     else:
@@ -165,114 +173,137 @@ def play_iptv(param):
         info_tag.setPlot(description)
         info_tag.setMediaType('video')
     else:
-        play_item.setInfo('video', {'title': name, 'plot': description, 'mediatype': 'video'})
-    xbmc.Player().play(proxy_url, play_item)
+        play_item.setInfo('video', {'title': name, 'plot': description})
+    xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, play_item)
 
 @route('/channels_pluto')
-def channels_pluto(param=None):
-    channels = pluto.playlist_pluto()
+def channels_pluto():
+    channels = pluto.GET_CHANNELS()
     if channels:
-        setcontent('movies')
-        for channel_name, desc, thumbnail, stream in channels:
-            addMenuItem({'name': channel_name, 'description': desc, 'iconimage': thumbnail, 'url': stream}, destiny='/play_iptv2', folder=False)
+        setcontent('videos')
+        for i in channels:
+            name, slug, thumb, desc = i
+            addMenuItem({'name': name, 'description': desc, 'iconimage': thumb, 'slug': slug}, destiny='/play_pluto')
         end()
         setview('List')
+    else:
+        notify('Sem canais')
 
-@route('/play_iptv2')
-def play_iptv2(param):
-    url = param.get('url', '')
-    name = param.get('name', 'Pluto TV')
-    description = param.get('description', '')
+@route('/play_pluto')
+def play_pluto(param):
+    slug = param.get('slug', '')
+    name = param.get('name', '')
     iconimage = param.get('iconimage', '')
-
-    is_helper = inputstreamhelper.Helper("hls")
-    if is_helper.check_inputstream():
-
+    description = param.get('description', '')
+    url = pluto.URL_PLAY(slug)
+    if url:
         play_item = xbmcgui.ListItem(path=url)
         play_item.setContentLookup(False)
-        play_item.setArt({"icon": "DefaultVideo.png", "thumb": iconimage})
         play_item.setMimeType("application/vnd.apple.mpegurl")
-
-        play_item.setProperty('inputstreamaddon', is_helper.inputstream_addon)
-        play_item.setProperty("inputstream.adaptive.manifest_type", "hls")
-
-        if '|' in url:
-            header = unquote_plus(url.split('|')[1])
-            play_item.setProperty("inputstream.adaptive.stream_headers", header)
-
-        play_item.setProperty('inputstream.adaptive.manifest_update_parameter', 'full')
-        play_item.setProperty('inputstream.adaptive.is_realtime_stream', 'true')
-
-        info = play_item.getVideoInfoTag()
-        info.setTitle(name)
-        info.setPlot(description)
-        info.setMediaType('video')
-
-        xbmc.Player().play(item=url, listitem=play_item)
+        play_item.setArt({"icon": iconimage or "DefaultVideo.png", "thumb": iconimage or "DefaultVideo.png"})
+        info_tag = play_item.getVideoInfoTag() if hasattr(play_item, 'getVideoInfoTag') else None
+        if info_tag:
+            info_tag.setTitle(name)
+            info_tag.setPlot(description)
+            info_tag.setMediaType('video')
+        else:
+            play_item.setInfo('video', {'title': name, 'plot': description})
+        xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, play_item)
+    else:
+        notify('Stream Indisponivel')
 
 @route('/radios')
 def radios():
-    tunein.radios_list(API_RADIOS)
+    radios_ = tunein.parselist(API_RADIOS)
+    if radios_:
+        for i in radios_:
+            name, url = i
+            addMenuItem({'name': name, 'description': '', 'url': url}, destiny='/play_radio')
+        end()
+        setview('List')
+    else:
+        notify('Sem radios')
+
+@route('/play_radio')
+def play_radio(param):
+    name = param.get('name', '')
+    url = param.get('url', '')
+    if url:
+        play_item = xbmcgui.ListItem(path=url)
+        play_item.setContentLookup(False)
+        play_item.setArt({"icon": "DefaultAudio.png", "thumb": "DefaultAudio.png"})
+        info_tag = play_item.getVideoInfoTag() if hasattr(play_item, 'getVideoInfoTag') else None
+        if info_tag:
+            info_tag.setTitle(name)
+            info_tag.setMediaType('song')
+        else:
+            play_item.setInfo('music', {'title': name})
+        xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, play_item)
 
 @route('/imdb_movies')
 def imdb_movies():
     addMenuItem({'name': 'Pesquisar Filmes', 'description': ''}, destiny='/find_movies')
-    addMenuItem({'name': 'Filmes - TOP 250', 'description': ''}, destiny='/imdb_movies_250')
-    addMenuItem({'name': 'Filmes - Popular', 'description': ''}, destiny='/imdb_movies_popular')
+    addMenuItem({'name': 'Top 250 Filmes', 'description': ''}, destiny='/imdb_movies_250')
+    addMenuItem({'name': 'Filmes Populares', 'description': ''}, destiny='/imdb_movies_popular')
     end()
-    setview('WideList')
+    setview('List')
 
 @route('/imdb_series')
 def imdb_series():
     addMenuItem({'name': 'Pesquisar Series', 'description': ''}, destiny='/find_series')
-    addMenuItem({'name': 'Series - TOP 250', 'description': ''}, destiny='/imdb_series_250')
-    addMenuItem({'name': 'Series - Popular', 'description': ''}, destiny='/imdb_series_popular')
+    addMenuItem({'name': 'Top 250 Series', 'description': ''}, destiny='/imdb_series_250')
+    addMenuItem({'name': 'Series Populares', 'description': ''}, destiny='/imdb_series_popular')
     end()
-    setview('WideList')
+    setview('List')
 
 @route('/find_movies')
 def find_movies():
-    search = input_text(heading='Pesquisar')
-    if search:
-        itens = imdb.IMDBScraper().search_movies(search)
-        if itens:
-            setcontent('movies')
-            for movie_name, img, page, year, imdb_id, original_name in itens:
-                movie_name = f'{movie_name} {year}'
-                addMenuItem({
-                    'name': movie_name,
-                    'description': '',
-                    'iconimage': img,
-                    'fanart': img,
-                    'url': '',
-                    'imdbnumber': imdb_id,
-                    'year': year,
-                    'movie_name': movie_name,
-                    'original_name': original_name,
-                    'playable': 'true'
-                }, destiny='/play_resolve_movies', folder=False)
-            end()
-            setview('List')
+    keyboard = xbmc.Keyboard('', 'Digite o nome do filme')
+    keyboard.doModal()
+    if keyboard.isConfirmed():
+        query = keyboard.getText()
+        if query:
+            results = imdb.IMDBScraper().search_movies(query)
+            if results:
+                setcontent('movies')
+                for movie_name, image, url, description, imdb_id, original_name, year in results:
+                    addMenuItem({
+                        'name': movie_name,
+                        'description': description,
+                        'iconimage': image,
+                        'fanart': image,
+                        'url': '',
+                        'imdbnumber': imdb_id,
+                        'movie_name': movie_name,
+                        'original_name': original_name,
+                        'year': year,
+                        'playable': True
+                    }, destiny='/play_resolve_movies', folder=False)
+                end()
+                setview('List')
 
 @route('/find_series')
 def find_series():
-    search = input_text(heading='Pesquisar')
-    if search:
-        itens = imdb.IMDBScraper().search_series(search)
-        if itens:
-            setcontent('tvshows')
-            for serie_name, img, page, year, imdb_id, original_name in itens:
-                addMenuItem({
-                    'name': serie_name,
-                    'description': '',
-                    'iconimage': img,
-                    'url': page,
-                    'imdbnumber': imdb_id,
-                    'serie_name': serie_name,
-                    'original_name': original_name
-                }, destiny='/open_imdb_seasons')
-            end()
-            setview('List')
+    keyboard = xbmc.Keyboard('', 'Digite o nome da série')
+    keyboard.doModal()
+    if keyboard.isConfirmed():
+        query = keyboard.getText()
+        if query:
+            results = imdb.IMDBScraper().search_series(query)
+            if results:
+                setcontent('tvshows')
+                for serie_name, image, url, description, imdb_id, original_name in results:
+                    addMenuItem({
+                        'name': serie_name,
+                        'description': description,
+                        'iconimage': image,
+                        'url': url,
+                        'imdbnumber': imdb_id,
+                        'serie_name': serie_name,
+                        'original_name': original_name
+                    }, destiny='/open_imdb_seasons')
+                end()
+                setview('List')
 
 @route('/imdb_movies_250')
 def movies_250(param=None):
@@ -280,7 +311,7 @@ def movies_250(param=None):
     per_page = 50
     start = (page - 1) * per_page
     end_ = start + per_page
-    all_items = imdb.IMDBScraper().movies_250()
+    all_items = imdb.IMDBScraper().movies_top250()
     itens = all_items[start:end_]
     if itens:
         setcontent('movies')
@@ -294,7 +325,7 @@ def movies_250(param=None):
                 'imdbnumber': imdb_id,
                 'movie_name': movie_name,
                 'original_name': original_name,
-                'playable': 'true'
+                'playable': True
             }, destiny='/play_resolve_movies', folder=False)
         if end_ < len(all_items):
             addMenuItem({'name': 'Próxima Página', 'page': page + 1}, destiny='/imdb_movies_250')
@@ -307,7 +338,7 @@ def series_250(param=None):
     per_page = 50
     start = (page - 1) * per_page
     end_ = start + per_page
-    all_items = imdb.IMDBScraper().series_250()
+    all_items = imdb.IMDBScraper().series_top250()
     itens = all_items[start:end_]
     if itens:
         setcontent('tvshows')
@@ -346,7 +377,7 @@ def movies_popular(param=None):
                 'imdbnumber': imdb_id,
                 'movie_name': movie_name,
                 'original_name': original_name,
-                'playable': 'true'
+                'playable': True
             }, destiny='/play_resolve_movies', folder=False)
         if end_ < len(all_items):
             addMenuItem({'name': 'Próxima Página', 'page': page + 1}, destiny='/imdb_movies_popular')
@@ -410,11 +441,22 @@ def open_imdb_episodes(param):
     url = param.get('url', '')
     imdb_id = param.get('imdbnumber', '')
     season = param.get('season', '')
+    
     itens = imdb.IMDBScraper().imdb_episodes(url)
     if itens:
-        setcontent('tvshows')
+        db.save_season_episodes(
+            imdb_id=imdb_id,
+            season=int(season),
+            serie_name=serie_name,
+            original_name=original_name,
+            episodes_data=itens
+        )
+        
+        setcontent('episodes')
         for episode_number, name, img, fanart, description in itens:
-            name_full = f'{episode_number} - {name}'
+            
+            name_full = '{}x{} {}'.format(season, episode_number, name)
+            
             addMenuItem({
                 'name': name_full,
                 'description': description,
@@ -426,40 +468,50 @@ def open_imdb_episodes(param):
                 'serie_name': serie_name,
                 'original_name': original_name,
                 'episode_title': name,
-                'playable': 'true'
+                'playable': True
             }, destiny='/play_resolve_series', folder=False)
+        
         end()
         setview('List')
 
 @route('/play_resolve_movies')
 def play_resolve_movies(param):
     notify('Aguarde')
-    stop_player()
+    
     movie_name = param.get('movie_name', param.get('name', ''))
     iconimage = param.get('iconimage', '')
+    fanart = param.get('fanart', '')
     imdb_number = param.get('imdbnumber', '')
     description = param.get('description', '')
     year = param.get('year', '')
     original_name = param.get('original_name', '')
 
-    stream = api_vod.VOD().movie(imdb_number)
+    result = api_vod.VOD().movie(imdb_number)
+    if result:
+        stream = result
 
-    if stream:
         url = stream.split('|')[0] if '|' in stream else stream
         headers = stream.split('|', 1)[1] if '|' in stream else ''
 
-        play_item = xbmcgui.ListItem(path=url)
-        play_item.setArt({'thumb': iconimage, 'icon': iconimage, 'fanart': iconimage})
-        play_item.setContentLookup(False)
-        play_item.setProperty('inputstream', 'inputstream.adaptive')
-        play_item.setProperty('inputstream.adaptive.original_audio_language', 'pt')
-        play_item.setMimeType('application/vnd.apple.mpegurl')
+        is_direct_file = url.lower().endswith(('.mp4', '.mkv', '.avi', '.mov', '.webm', '.ts'))
 
-        if headers:
-            play_item.setProperty('inputstream.adaptive.stream_headers', headers)
+        play_item = xbmcgui.ListItem(path=url)
+        play_item.setArt({'thumb': iconimage, 'icon': iconimage, 'fanart': fanart or iconimage})
+        play_item.setContentLookup(False)
+
+        if is_direct_file:
+            play_item.setMimeType('video/mp4')
+            if headers:
+                url_with_headers = f"{url}|{headers}&User-Agent=Mozilla/5.0Referer=https://google.com"
+                play_item.setPath(url_with_headers)
+        else:
+            play_item.setProperty('inputstream', 'inputstream.adaptive')
+            play_item.setProperty('inputstream.adaptive.manifest_type', 'hls')
+            play_item.setProperty('inputstream.adaptive.original_audio_language', 'pt')
+            if headers:
+                play_item.setProperty('inputstream.adaptive.stream_headers', headers)
 
         kodi_version = int(xbmc.getInfoLabel('System.BuildVersion').split('.')[0])
-
         if kodi_version >= 20:
             info_tag = play_item.getVideoInfoTag()
             info_tag.setTitle(movie_name)
@@ -470,13 +522,16 @@ def play_resolve_movies(param):
             if year:
                 info_tag.setYear(int(year))
         else:
-            play_item.setInfo('video', {
+            info_dict = {
                 'title': movie_name,
                 'plot': description,
                 'imdbnumber': imdb_number,
                 'mediatype': 'movie',
                 'originaltitle': original_name
-            })
+            }
+            if year:
+                info_dict['year'] = int(year)
+            play_item.setInfo('video', info_dict)
 
         notify('Escolha o audio portugues nos ajustes')
         xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, play_item)
@@ -486,7 +541,7 @@ def play_resolve_movies(param):
 @route('/play_resolve_series')
 def play_resolve_series(param):
     notify('Aguarde')
-    stop_player()
+    
     serie_name = param.get('serie_name', '')
     original_name = param.get('original_name', '')
     season = param.get('season_num', '')
@@ -496,27 +551,59 @@ def play_resolve_series(param):
     fanart = param.get('fanart', '')
     imdb_number = param.get('imdbnumber', '')
     description = param.get('description', '')
+    from_upnext = param.get('from_upnext', 'false')
+    
+    if not episode or not season:
+        notify('Erro: Parâmetros inválidos')
+        return
+    
+    try:
+        current_episode_num = int(episode)
+        season_num = int(season)
+    except (ValueError, TypeError) as e:
+        notify('Erro: Número de episódio/temporada inválido')
+        return
 
-    stream = api_vod.VOD().tvshows(imdb_number, season, episode)
+    start_tracking_episode(
+        imdb_id=imdb_number,
+        season=season_num,
+        episode=current_episode_num,
+        title=serie_name,
+        thumbnail=iconimage,
+        fanart=fanart,
+        description=description,
+        serie_name=serie_name,
+        original_name=original_name
+    )
 
-    if stream:
+    result = api_vod.VOD().tvshows(imdb_number, season, episode)
+    if result:
+        stream = result
+
         url = stream.split('|')[0] if '|' in stream else stream
         headers = stream.split('|', 1)[1] if '|' in stream else ''
+
+        is_direct_file = url.lower().endswith(('.mp4', '.mkv', '.avi', '.mov', '.webm', '.ts'))
 
         display_title = episode_title if episode_title else f'S{season}E{episode.zfill(2)}'
 
         play_item = xbmcgui.ListItem(path=url)
         play_item.setArt({'thumb': iconimage, 'icon': iconimage, 'fanart': fanart or iconimage})
         play_item.setContentLookup(False)
-        play_item.setProperty('inputstream', 'inputstream.adaptive')
-        play_item.setProperty('inputstream.adaptive.original_audio_language', 'pt')
-        play_item.setMimeType('application/vnd.apple.mpegurl')
 
-        if headers:
-            play_item.setProperty('inputstream.adaptive.stream_headers', headers)
+        if is_direct_file:
+            play_item.setMimeType('video/mp4')
+            if headers:
+                url_with_headers = f"{url}|{headers}&User-Agent=Mozilla/5.0Referer=https://google.com"
+                play_item.setPath(url_with_headers)
+        else:
+            play_item.setProperty('inputstream', 'inputstream.adaptive')
+            play_item.setProperty('inputstream.adaptive.manifest_type', 'hls')
+            play_item.setProperty('inputstream.adaptive.original_audio_language', 'pt')
+            if headers:
+                play_item.setProperty('inputstream.adaptive.stream_headers', headers)
 
         kodi_version = int(xbmc.getInfoLabel('System.BuildVersion').split('.')[0])
-
         if kodi_version >= 20:
             info_tag = play_item.getVideoInfoTag()
             info_tag.setTitle(display_title)
@@ -525,15 +612,20 @@ def play_resolve_series(param):
             info_tag.setPlot(description)
             info_tag.setIMDBNumber(imdb_number)
             info_tag.setMediaType('episode')
+            info_tag.setSeason(season_num)
+            info_tag.setEpisode(current_episode_num)
         else:
-            play_item.setInfo('video', {
+            info_dict = {
                 'title': display_title,
                 'tvshowtitle': serie_name,
                 'originaltitle': original_name,
                 'plot': description,
                 'imdbnumber': imdb_number,
-                'mediatype': 'episode'
-            })
+                'mediatype': 'episode',
+                'season': season_num,
+                'episode': current_episode_num
+            }
+            play_item.setInfo('video', info_dict)
 
         notify('Escolha o audio portugues nos ajustes')
         xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, play_item)

@@ -111,6 +111,7 @@ class UpNextService:
         self.monitoring = False
         self.monitor_thread = None
         self._stop_monitoring = False
+        self._monitor_lock = threading.Lock()
         
         xbmc.log('KING IPTV UpNext - Inicializado com: enabled={}, countdown={}s, trigger={}s'.format(
             self.enabled, self.countdown_seconds, self.trigger_seconds
@@ -120,6 +121,16 @@ class UpNextService:
         if not self.enabled:
             xbmc.log('KING IPTV UpNext - Serviço desabilitado', xbmc.LOGDEBUG)
             return
+        
+        with self._monitor_lock:
+            if self.monitoring:
+                xbmc.log('KING IPTV UpNext - Parando monitoramento anterior', xbmc.LOGINFO)
+                self._stop_monitoring = True
+                self.monitoring = False
+        
+        if self.monitor_thread and self.monitor_thread.is_alive():
+            xbmc.log('KING IPTV UpNext - Aguardando thread anterior...', xbmc.LOGDEBUG)
+            self.monitor_thread.join(timeout=2.0)
         
         next_metadata = self._find_next_episode(imdb_id, season, episode)
         
@@ -149,8 +160,10 @@ class UpNextService:
             next_info['next_season'], next_info['next_episode']
         ), xbmc.LOGINFO)
         
-        self._stop_monitoring = False
-        self.monitoring = True
+        with self._monitor_lock:
+            self._stop_monitoring = False
+            self.monitoring = True
+        
         self.monitor_thread = threading.Thread(
             target=self._monitor_playback,
             args=(next_info,)
@@ -211,10 +224,14 @@ class UpNextService:
             if self.player.isPlayingVideo():
                 break
             if monitor.waitForAbort(0.5) or self._stop_monitoring:
+                with self._monitor_lock:
+                    self.monitoring = False
                 return
         
         if not self.player.isPlayingVideo():
             xbmc.log('KING IPTV UpNext - Ainda não está tocando após longa espera', xbmc.LOGWARNING)
+            with self._monitor_lock:
+                self.monitoring = False
             return
         
         total_time = 0
@@ -225,15 +242,25 @@ class UpNextService:
                     break
             except:
                 pass
+            
+            if self._stop_monitoring:
+                with self._monitor_lock:
+                    self.monitoring = False
+                return
+            
             monitor.waitForAbort(0.5)
         
         if total_time <= 60:
             xbmc.log('KING IPTV UpNext - total_time inválido ({}) → abortando'.format(int(total_time)), xbmc.LOGWARNING)
+            with self._monitor_lock:
+                self.monitoring = False
             return
         
         xbmc.log('KING IPTV UpNext - Total time: {}s, trigger: {}s antes do fim'.format(
             int(total_time), self.trigger_seconds
         ), xbmc.LOGINFO)
+        
+        check_interval = 2
         
         while self.player.isPlayingVideo() and not self._stop_monitoring:
             try:
@@ -259,14 +286,16 @@ class UpNextService:
                     
                     break
                 
-                if monitor.waitForAbort(1):
+                if monitor.waitForAbort(check_interval):
                     break
                     
             except Exception as e:
                 xbmc.log('KING IPTV UpNext - Erro no monitoramento: {}'.format(str(e)), xbmc.LOGERROR)
                 break
         
-        self.monitoring = False
+        with self._monitor_lock:
+            self.monitoring = False
+        
         xbmc.log('KING IPTV UpNext - Monitoramento finalizado', xbmc.LOGINFO)
     
     def _show_upnext_dialog(self, next_info):
@@ -326,19 +355,30 @@ class UpNextService:
             xbmc.log(traceback.format_exc(), xbmc.LOGERROR)
     
     def stop_monitoring(self):
-        self._stop_monitoring = True
-        self.monitoring = False
+        with self._monitor_lock:
+            self._stop_monitoring = True
+            self.monitoring = False
+        
+        if self.monitor_thread and self.monitor_thread.is_alive():
+            self.monitor_thread.join(timeout=3.0)
+            if self.monitor_thread.is_alive():
+                xbmc.log('KING IPTV UpNext - Thread não finalizou no tempo limite', xbmc.LOGWARNING)
+        
         xbmc.log('KING IPTV UpNext - Monitoramento parado', xbmc.LOGDEBUG)
     
     def is_monitoring(self):
-        return self.monitoring
+        with self._monitor_lock:
+            return self.monitoring
 
 
 _upnext_service = None
+_upnext_lock = threading.Lock()
 
 
 def get_upnext_service(player, database):
     global _upnext_service
-    if _upnext_service is None:
-        _upnext_service = UpNextService(player, database)
-    return _upnext_service
+    
+    with _upnext_lock:
+        if _upnext_service is None:
+            _upnext_service = UpNextService(player, database)
+        return _upnext_service

@@ -41,34 +41,47 @@ class KingPlayer(xbmc.Player):
         self._monitor = None
         self._tracking_thread = None
         self._stop_tracking = False
+        self._saved_at_90_percent = False
+        
+        self._save_lock = threading.Lock()
+        self._state_lock = threading.Lock()
         
         self.upnext_service = get_upnext_service(self, db)
     
     def start_playback(self, imdb_id, content_type, title, season=None, episode=None,
                       thumbnail='', fanart='', description='', resume_point=0,
                       serie_name='', original_name=''):
-        if self.is_tracking:
-            xbmc.log('KING IPTV - Parando tracking anterior antes de iniciar novo', xbmc.LOGINFO)
-            self._stop_tracking = True
-            self.is_tracking = False
-            if self.upnext_service:
-                self.upnext_service.stop_monitoring()
-            import time
-            time.sleep(0.5)
         
-        self.imdb_id = imdb_id
-        self.content_type = content_type
-        self.title = title
-        self.season = season
-        self.episode = episode
-        self.thumbnail = thumbnail
-        self.fanart = fanart
-        self.description = description
-        self.serie_name = serie_name
-        self.original_name = original_name
-        self.resume_point = resume_point
-        self.is_tracking = True
-        self._stop_tracking = False
+        with self._state_lock:
+            if self.is_tracking:
+                xbmc.log('KING IPTV - Parando tracking anterior antes de iniciar novo', xbmc.LOGINFO)
+                self._stop_tracking = True
+                self.is_tracking = False
+                
+                if self.upnext_service:
+                    self.upnext_service.stop_monitoring()
+        
+        if self._tracking_thread and self._tracking_thread.is_alive():
+            xbmc.log('KING IPTV - Aguardando thread anterior finalizar...', xbmc.LOGINFO)
+            self._tracking_thread.join(timeout=2.0)
+            if self._tracking_thread.is_alive():
+                xbmc.log('KING IPTV - Thread anterior não finalizou no tempo limite', xbmc.LOGWARNING)
+        
+        with self._state_lock:
+            self.imdb_id = imdb_id
+            self.content_type = content_type
+            self.title = title
+            self.season = season
+            self.episode = episode
+            self.thumbnail = thumbnail
+            self.fanart = fanart
+            self.description = description
+            self.serie_name = serie_name
+            self.original_name = original_name
+            self.resume_point = resume_point
+            self.is_tracking = True
+            self._stop_tracking = False
+            self._saved_at_90_percent = False
         
         self._tracking_thread = threading.Thread(target=self._tracking_loop)
         self._tracking_thread.daemon = True
@@ -76,64 +89,101 @@ class KingPlayer(xbmc.Player):
     
     def _tracking_loop(self):
         monitor = xbmc.Monitor()
-        last_save_time = 0
-        save_interval = 10
         
-        xbmc.log('KING IPTV - Iniciando tracking loop', xbmc.LOGINFO)
+        xbmc.log('KING IPTV - Iniciando tracking loop (salvamento aos 90%)', xbmc.LOGINFO)
         
         waited = 0
         max_wait = 45
         
         while waited < max_wait:
             if monitor.waitForAbort(0.5):
+                xbmc.log('KING IPTV - Abort detectado durante inicialização', xbmc.LOGINFO)
+                self._cleanup_tracking_state()
                 return
-            if self.isPlayingVideo() and self.getTotalTime() > 30:
-                break
+            
+            if self._stop_tracking:
+                xbmc.log('KING IPTV - Stop tracking solicitado durante inicialização', xbmc.LOGINFO)
+                self._cleanup_tracking_state()
+                return
+            
+            try:
+                if self.isPlayingVideo() and self.getTotalTime() > 30:
+                    break
+            except:
+                pass
+            
             waited += 0.5
         
-        if not self.isPlayingVideo() or self.getTotalTime() <= 30:
-            xbmc.log('KING IPTV - Playback não iniciado corretamente após espera → cancelando tracking e UpNext', xbmc.LOGWARNING)
-            self.is_tracking = False
+        if not self.isPlayingVideo():
+            xbmc.log('KING IPTV - Vídeo não está tocando após espera', xbmc.LOGWARNING)
+            self._cleanup_tracking_state()
             return
         
         try:
-            self.total_time = int(self.getTotalTime())
+            total = self.getTotalTime()
+            if total <= 30:
+                xbmc.log('KING IPTV - Total time muito curto ({}s)'.format(total), xbmc.LOGWARNING)
+                self._cleanup_tracking_state()
+                return
+            
+            self.total_time = int(total)
             xbmc.log('KING IPTV - Reprodução confirmada. Total: {}s'.format(self.total_time), xbmc.LOGINFO)
-        except:
-            xbmc.log('KING IPTV - Ainda sem total_time após espera longa', xbmc.LOGERROR)
+            
+        except Exception as e:
+            xbmc.log('KING IPTV - Erro ao obter total_time: {}'.format(str(e)), xbmc.LOGERROR)
+            self._cleanup_tracking_state()
             return
         
-        if self.content_type == 'episode' and self.season and self.episode and self.imdb_id:
-            xbmc.log('KING IPTV - Iniciando UpNext AGORA que vídeo está tocando', xbmc.LOGINFO)
+        with self._state_lock:
+            should_start_upnext = (
+                self.content_type == 'episode' and 
+                self.season is not None and 
+                self.episode is not None and 
+                self.imdb_id is not None
+            )
+        
+        if should_start_upnext:
+            xbmc.log('KING IPTV - Iniciando UpNext', xbmc.LOGINFO)
             try:
                 self.upnext_service.start_monitoring(self.imdb_id, self.season, self.episode)
             except Exception as e:
                 xbmc.log('KING IPTV - Erro ao iniciar Up Next: {}'.format(str(e)), xbmc.LOGERROR)
         
         self.current_time = 0
-        self._save_progress()
         
         while self.is_tracking and self.isPlayingVideo() and not self._stop_tracking:
             try:
                 self.current_time = self.getTime()
                 watched_percent = self.get_watched_percent()
                 
-                if self.current_time - last_save_time >= save_interval:
-                    xbmc.log('KING IPTV - Salvando progresso: {}s / {}s ({}%)'.format(
-                        int(self.current_time), int(self.total_time), int(watched_percent)
-                    ), xbmc.LOGINFO)
+                if watched_percent >= 90.0 and not self._saved_at_90_percent:
+                    xbmc.log('KING IPTV - Atingiu 90%! Salvando progresso e marcando como assistido', xbmc.LOGINFO)
                     self._save_progress()
-                    last_save_time = self.current_time
+                    self._saved_at_90_percent = True
                 
-                if monitor.waitForAbort(1):
+                if int(self.current_time) % 60 == 0:
+                    xbmc.log('KING IPTV - Monitorando: {}s / {}s ({}%)'.format(
+                        int(self.current_time), int(self.total_time), int(watched_percent)
+                    ), xbmc.LOGDEBUG)
+                
+                if monitor.waitForAbort(2):
                     break
                     
             except Exception as e:
                 xbmc.log('KING IPTV - Erro no tracking loop: {}'.format(str(e)), xbmc.LOGERROR)
                 break
         
-        xbmc.log('KING IPTV - Tracking loop finalizado, salvando progresso final', xbmc.LOGINFO)
-        self._save_progress()
+        if not self._saved_at_90_percent:
+            xbmc.log('KING IPTV - Tracking finalizado antes de 90%, salvando progresso atual', xbmc.LOGINFO)
+            self._save_progress()
+    
+    def _cleanup_tracking_state(self):
+        with self._state_lock:
+            self.is_tracking = False
+            self._stop_tracking = False
+        
+        if self.upnext_service:
+            self.upnext_service.stop_monitoring()
     
     def get_watched_percent(self):
         if self.total_time == 0:
@@ -141,56 +191,95 @@ class KingPlayer(xbmc.Player):
         return (self.current_time / self.total_time) * 100
     
     def _save_progress(self):
-        if not self.imdb_id or not self.content_type:
-            xbmc.log('KING IPTV - Sem imdb_id ou content_type, pulando salvamento', xbmc.LOGDEBUG)
-            return
-        
-        try:
-            watched_percent = self.get_watched_percent()
-            
-            xbmc.log('KING IPTV - Tentando salvar progresso: {}% ({}s / {}s)'.format(
-                int(watched_percent), int(self.current_time), int(self.total_time)
-            ), xbmc.LOGINFO)
-            
-            if self.content_type == 'episode':
-                if not self.season or not self.episode:
-                    xbmc.log('KING IPTV - Sem season ou episode, pulando salvamento', xbmc.LOGWARNING)
+        with self._save_lock:
+            with self._state_lock:
+                if not self.imdb_id or not self.content_type:
+                    xbmc.log('KING IPTV - Estado inválido: sem imdb_id ou content_type', xbmc.LOGDEBUG)
                     return
                 
-                try:
-                    xbmc.log('KING IPTV - Chamando db.save_episode_progress...', xbmc.LOGINFO)
-                    db.save_episode_progress(
-                        imdb_id=self.imdb_id,
-                        season=self.season,
-                        episode=self.episode,
-                        current_time=self.current_time,
-                        total_time=self.total_time,
-                        title=self.title or '',
-                        thumbnail=self.thumbnail or '',
-                        fanart=self.fanart or '',
-                        serie_name=self.serie_name or '',
-                        original_name=self.original_name or ''
-                    )
-                    xbmc.log('KING IPTV - Progresso do episódio salvo com sucesso', xbmc.LOGINFO)
+                if self.total_time == 0:
+                    xbmc.log('KING IPTV - Estado inválido: total_time é zero', xbmc.LOGWARNING)
+                    return
+                
+                imdb_id = self.imdb_id
+                content_type = self.content_type
+                current_time = self.current_time
+                total_time = self.total_time
+                season = self.season
+                episode = self.episode
+                title = self.title
+                thumbnail = self.thumbnail
+                fanart = self.fanart
+                serie_name = self.serie_name
+                original_name = self.original_name
+            
+            try:
+                watched_percent = (current_time / total_time) * 100 if total_time > 0 else 0
+                
+                xbmc.log('KING IPTV - Salvando progresso: {}% ({}s / {}s)'.format(
+                    int(watched_percent), int(current_time), int(total_time)
+                ), xbmc.LOGINFO)
+                
+                if content_type == 'episode':
+                    if season is None or episode is None:
+                        xbmc.log('KING IPTV - Não é possível salvar: season ou episode é None', xbmc.LOGWARNING)
+                        return
                     
-                    if watched_percent >= 90:
-                        self._sync_kodi_watched_status()
-                    
-                except Exception as e:
-                    xbmc.log('KING IPTV - Erro ao salvar progresso do episódio: {}'.format(str(e)), xbmc.LOGERROR)
-                    import traceback
-                    xbmc.log(traceback.format_exc(), xbmc.LOGERROR)
-                    raise
-                    
-        except Exception as e:
-            xbmc.log('KING IPTV - Erro geral ao salvar progresso: {}'.format(str(e)), xbmc.LOGERROR)
-            import traceback
-            xbmc.log(traceback.format_exc(), xbmc.LOGERROR)
+                    try:
+                        db.save_episode_progress(
+                            imdb_id=imdb_id,
+                            season=season,
+                            episode=episode,
+                            current_time=current_time,
+                            total_time=total_time,
+                            title=title or '',
+                            thumbnail=thumbnail or '',
+                            fanart=fanart or '',
+                            serie_name=serie_name or '',
+                            original_name=original_name or ''
+                        )
+                        xbmc.log('KING IPTV - Progresso do episódio salvo com sucesso', xbmc.LOGINFO)
+                        
+                        if watched_percent >= 90:
+                            self._sync_kodi_watched_status()
+                        
+                    except Exception as e:
+                        xbmc.log('KING IPTV - Erro ao salvar progresso do episódio: {}'.format(str(e)), xbmc.LOGERROR)
+                        import traceback
+                        xbmc.log(traceback.format_exc(), xbmc.LOGERROR)
+                        
+                        xbmc.sleep(2000)
+                        try:
+                            db.save_episode_progress(
+                                imdb_id=imdb_id,
+                                season=season,
+                                episode=episode,
+                                current_time=current_time,
+                                total_time=total_time,
+                                title=title or '',
+                                thumbnail=thumbnail or '',
+                                fanart=fanart or '',
+                                serie_name=serie_name or '',
+                                original_name=original_name or ''
+                            )
+                            xbmc.log('KING IPTV - Retry de salvamento bem-sucedido', xbmc.LOGINFO)
+                        except:
+                            xbmc.log('KING IPTV - Retry de salvamento falhou', xbmc.LOGERROR)
+                        
+            except Exception as e:
+                xbmc.log('KING IPTV - Erro geral ao salvar progresso: {}'.format(str(e)), xbmc.LOGERROR)
+                import traceback
+                xbmc.log(traceback.format_exc(), xbmc.LOGERROR)
     
     def _sync_kodi_watched_status(self):
         try:
-            if not self.imdb_id or not self.season or not self.episode:
-                return
+            with self._state_lock:
+                if not self.imdb_id or not self.season or not self.episode:
+                    return
+                
+                imdb_id = self.imdb_id
+                season = self.season
+                episode = self.episode
                 
             query = {
                 "jsonrpc": "2.0",
@@ -198,8 +287,8 @@ class KingPlayer(xbmc.Player):
                 "params": {
                     "filter": {
                         "and": [
-                            {"field": "season", "operator": "is", "value": str(self.season)},
-                            {"field": "episode", "operator": "is", "value": str(self.episode)}
+                            {"field": "season", "operator": "is", "value": str(season)},
+                            {"field": "episode", "operator": "is", "value": str(episode)}
                         ]
                     },
                     "properties": ["file", "uniqueid"]
@@ -212,7 +301,7 @@ class KingPlayer(xbmc.Player):
             if 'result' in result and 'episodes' in result['result']:
                 for ep in result['result']['episodes']:
                     uniqueids = ep.get('uniqueid', {})
-                    if uniqueids.get('imdb') == self.imdb_id or uniqueids.get('tmdb') == self.imdb_id:
+                    if uniqueids.get('imdb') == imdb_id or uniqueids.get('tmdb') == imdb_id:
                         episode_id = ep['episodeid']
                         
                         watched_query = {
@@ -230,54 +319,80 @@ class KingPlayer(xbmc.Player):
                         }
                         xbmc.executeJSONRPC(json.dumps(watched_query))
                         xbmc.log('KING IPTV - Episódio marcado como assistido no Kodi', xbmc.LOGINFO)
-                    
-                    return
+                        return
                     
         except Exception as e:
             xbmc.log('KING IPTV - Erro ao sincronizar com Kodi: {} (ignorando)'.format(str(e)), xbmc.LOGDEBUG)
     
     def onPlayBackStopped(self):
         xbmc.log('KING IPTV - onPlayBackStopped chamado', xbmc.LOGINFO)
-        self._stop_tracking = True
-        self.is_tracking = False
+        
+        with self._state_lock:
+            self._stop_tracking = True
+            was_tracking = self.is_tracking
+            self.is_tracking = False
         
         if self.upnext_service:
             self.upnext_service.stop_monitoring()
         
-        if self.content_type and self.imdb_id and self.current_time > 0:
-            xbmc.log('KING IPTV - Salvando progresso final ao parar', xbmc.LOGINFO)
-            self._save_progress()
+        if was_tracking:
+            with self._state_lock:
+                has_valid_state = (
+                    self.content_type is not None and 
+                    self.imdb_id is not None and 
+                    self.current_time > 0
+                )
+            
+            if has_valid_state:
+                xbmc.log('KING IPTV - Salvando progresso final ao parar', xbmc.LOGINFO)
+                self._save_progress()
         
-        self.imdb_id = None
-        self.content_type = None
-        self.season = None
-        self.episode = None
+        with self._state_lock:
+            self.imdb_id = None
+            self.content_type = None
+            self.season = None
+            self.episode = None
+            self._saved_at_90_percent = False
         
         xbmc.log('KING IPTV - Player resetado', xbmc.LOGDEBUG)
     
     def onPlayBackEnded(self):
         xbmc.log('KING IPTV - onPlayBackEnded chamado', xbmc.LOGINFO)
-        self._stop_tracking = True
-        self.is_tracking = False
+        
+        with self._state_lock:
+            self._stop_tracking = True
+            was_tracking = self.is_tracking
+            self.is_tracking = False
         
         if self.upnext_service:
             self.upnext_service.stop_monitoring()
         
-        if self.content_type and self.imdb_id:
-            self.current_time = self.total_time
-            xbmc.log('KING IPTV - Salvando progresso final ao terminar (100%)', xbmc.LOGINFO)
-            self._save_progress()
+        if was_tracking:
+            with self._state_lock:
+                has_valid_state = (
+                    self.content_type is not None and 
+                    self.imdb_id is not None
+                )
+            
+            if has_valid_state:
+                with self._state_lock:
+                    self.current_time = self.total_time
+                
+                xbmc.log('KING IPTV - Salvando progresso final ao terminar (100%)', xbmc.LOGINFO)
+                self._save_progress()
         
-        self.imdb_id = None
-        self.content_type = None
-        self.season = None
-        self.episode = None
+        with self._state_lock:
+            self.imdb_id = None
+            self.content_type = None
+            self.season = None
+            self.episode = None
+            self._saved_at_90_percent = False
         
         xbmc.log('KING IPTV - Player resetado', xbmc.LOGDEBUG)
     
     def onPlayBackError(self):
-        self._stop_tracking = True
-        self.is_tracking = False
+        xbmc.log('KING IPTV - onPlayBackError chamado', xbmc.LOGERROR)
+        self._cleanup_tracking_state()
 
 
 class Monitor(xbmc.Monitor):
@@ -292,13 +407,16 @@ class Monitor(xbmc.Monitor):
 
 
 _global_player = None
+_player_lock = threading.Lock()
 
 
 def get_player():
     global _global_player
-    if _global_player is None:
-        _global_player = KingPlayer()
-    return _global_player
+    
+    with _player_lock:
+        if _global_player is None:
+            _global_player = KingPlayer()
+        return _global_player
 
 
 def start_tracking_episode(imdb_id, season, episode, title, thumbnail='', fanart='', 

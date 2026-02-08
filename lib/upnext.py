@@ -256,11 +256,34 @@ class UpNextService:
                 self.monitoring = False
             return
         
-        xbmc.log('KING IPTV UpNext - Total time: {}s, trigger: {}s antes do fim'.format(
-            int(total_time), self.trigger_seconds
+        safety_margin = 30
+        start_at_90_percent = total_time * 0.9
+        start_at_trigger = total_time - self.trigger_seconds - safety_margin
+        start_monitoring_at = min(start_at_90_percent, start_at_trigger)
+        
+        light_check_interval = min(60, max(10, int(self.trigger_seconds / 2)))
+        
+        xbmc.log('KING IPTV UpNext - Total: {}s, trigger: {}s, monitoramento ativo a partir de: {}s ({}%)'.format(
+            int(total_time), 
+            self.trigger_seconds, 
+            int(start_monitoring_at),
+            int((start_monitoring_at / total_time) * 100)
         ), xbmc.LOGINFO)
         
-        check_interval = 2
+        while self.player.isPlayingVideo() and not self._stop_monitoring:
+            try:
+                current_time = self.player.getTime()
+                
+                if current_time >= start_monitoring_at:
+                    xbmc.log('KING IPTV UpNext - Entrando em monitoramento ativo', xbmc.LOGDEBUG)
+                    break
+                
+                if monitor.waitForAbort(light_check_interval):
+                    break
+                    
+            except Exception as e:
+                xbmc.log('KING IPTV UpNext - Erro na fase leve: {}'.format(str(e)), xbmc.LOGERROR)
+                break
         
         while self.player.isPlayingVideo() and not self._stop_monitoring:
             try:
@@ -286,11 +309,11 @@ class UpNextService:
                     
                     break
                 
-                if monitor.waitForAbort(check_interval):
+                if monitor.waitForAbort(2):
                     break
                     
             except Exception as e:
-                xbmc.log('KING IPTV UpNext - Erro no monitoramento: {}'.format(str(e)), xbmc.LOGERROR)
+                xbmc.log('KING IPTV UpNext - Erro no monitoramento ativo: {}'.format(str(e)), xbmc.LOGERROR)
                 break
         
         with self._monitor_lock:

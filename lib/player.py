@@ -50,14 +50,16 @@ class KingPlayer(xbmc.Player):
                       thumbnail='', fanart='', description='',
                       serie_name='', original_name=''):
         
+        if self.upnext_service:
+            xbmc.log('KING IPTV - Parando upnext service antes de iniciar nova reprodução', xbmc.LOGINFO)
+            self.upnext_service.stop_monitoring()
+            xbmc.sleep(500)
+        
         with self._state_lock:
             if self.is_tracking:
                 xbmc.log('KING IPTV - Parando tracking anterior antes de iniciar novo', xbmc.LOGINFO)
                 self._stop_tracking = True
                 self.is_tracking = False
-                
-                if self.upnext_service:
-                    self.upnext_service.stop_monitoring()
         
         if self._tracking_thread and self._tracking_thread.is_alive():
             xbmc.log('KING IPTV - Aguardando thread anterior finalizar...', xbmc.LOGINFO)
@@ -213,10 +215,7 @@ class KingPlayer(xbmc.Player):
             watched_percent = (current_time / total_time) * 100
             
             try:
-                if content_type == 'episode':
-                    if season is None or episode is None:
-                        xbmc.log('KING IPTV - Episódio sem season/episode definidos', xbmc.LOGWARNING)
-                        return
+                if content_type == 'episode' and season is not None and episode is not None:
                     
                     try:
                         db.save_episode_progress(
@@ -320,13 +319,13 @@ class KingPlayer(xbmc.Player):
     def onPlayBackStopped(self):
         xbmc.log('KING IPTV - onPlayBackStopped chamado', xbmc.LOGINFO)
         
+        if self.upnext_service:
+            self.upnext_service.stop_monitoring()
+        
         with self._state_lock:
             self._stop_tracking = True
             was_tracking = self.is_tracking
             self.is_tracking = False
-        
-        if self.upnext_service:
-            self.upnext_service.stop_monitoring()
         
         if was_tracking:
             with self._state_lock:
@@ -352,13 +351,13 @@ class KingPlayer(xbmc.Player):
     def onPlayBackEnded(self):
         xbmc.log('KING IPTV - onPlayBackEnded chamado', xbmc.LOGINFO)
         
+        if self.upnext_service:
+            self.upnext_service.stop_monitoring()
+        
         with self._state_lock:
             self._stop_tracking = True
             was_tracking = self.is_tracking
             self.is_tracking = False
-        
-        if self.upnext_service:
-            self.upnext_service.stop_monitoring()
         
         if was_tracking:
             with self._state_lock:

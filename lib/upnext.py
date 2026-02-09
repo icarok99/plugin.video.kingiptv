@@ -40,6 +40,11 @@ class UpNextDialog(xbmcgui.WindowXMLDialog):
             if thumbnail:
                 self.getControl(self.IMAGE_THUMBNAIL).setImage(thumbnail)
             
+            try:
+                self.setFocusId(self.BUTTON_PLAY_NOW)
+            except:
+                pass
+            
             self._start_countdown()
             
         except Exception as e:
@@ -74,20 +79,60 @@ class UpNextDialog(xbmcgui.WindowXMLDialog):
     
     def onClick(self, controlId):
         if controlId == self.BUTTON_PLAY_NOW:
+            xbmc.log('KING IPTV UpNext - Botão Reproduzir clicado', xbmc.LOGINFO)
             self.auto_play = True
             self._stop_countdown = True
             self.close()
             
         elif controlId == self.BUTTON_CANCEL:
+            xbmc.log('KING IPTV UpNext - Botão Cancelar clicado', xbmc.LOGINFO)
             self.cancelled = True
             self._stop_countdown = True
             self.close()
     
     def onAction(self, action):
-        if action.getId() in (xbmcgui.ACTION_NAV_BACK, xbmcgui.ACTION_PREVIOUS_MENU):
+        action_id = action.getId()
+        
+        xbmc.log('KING IPTV UpNext - Ação recebida: {}'.format(action_id), xbmc.LOGDEBUG)
+        
+        if action_id in (xbmcgui.ACTION_SELECT_ITEM, xbmcgui.ACTION_PLAYER_PLAY):
+            try:
+                focused_control = self.getFocusId()
+                xbmc.log('KING IPTV UpNext - SELECT pressionado no controle ID: {}'.format(focused_control), xbmc.LOGINFO)
+                
+                if focused_control == self.BUTTON_PLAY_NOW:
+                    xbmc.log('KING IPTV UpNext - Reproduzir selecionado via controle', xbmc.LOGINFO)
+                    self.auto_play = True
+                    self._stop_countdown = True
+                    self.close()
+                    return
+                    
+                elif focused_control == self.BUTTON_CANCEL:
+                    xbmc.log('KING IPTV UpNext - Cancelar selecionado via controle', xbmc.LOGINFO)
+                    self.cancelled = True
+                    self._stop_countdown = True
+                    self.close()
+                    return
+            except Exception as e:
+                xbmc.log('KING IPTV UpNext - Erro ao processar SELECT: {}'.format(str(e)), xbmc.LOGERROR)
+        
+        elif action_id in (xbmcgui.ACTION_NAV_BACK, xbmcgui.ACTION_PREVIOUS_MENU, xbmcgui.ACTION_STOP):
+            xbmc.log('KING IPTV UpNext - VOLTAR pressionado via controle', xbmc.LOGINFO)
             self.cancelled = True
             self._stop_countdown = True
             self.close()
+            return
+        
+        elif action_id in (xbmcgui.ACTION_MOVE_LEFT, xbmcgui.ACTION_MOVE_RIGHT, 
+                          xbmcgui.ACTION_MOVE_UP, xbmcgui.ACTION_MOVE_DOWN):
+            pass
+        
+        elif action_id == xbmcgui.ACTION_PLAYER_PLAY:
+            xbmc.log('KING IPTV UpNext - PLAY direto pressionado', xbmc.LOGINFO)
+            self.auto_play = True
+            self._stop_countdown = True
+            self.close()
+            return
 
 
 class UpNextService:
@@ -201,7 +246,7 @@ class UpNextService:
                 row = cursor.fetchone()
                 if row:
                     result = dict(row)
-                    xbmc.log('KING IPTV UpNext - Próximo episódio encontrado (busca genérica): S{}E{}'.format(
+                    xbmc.log('KING IPTV UpNext - Próximo episódio encontrado via query direta: S{}E{}'.format(
                         result['season'], result['episode']
                     ), xbmc.LOGINFO)
                     return result
@@ -326,6 +371,8 @@ class UpNextService:
             import xbmcaddon
             addon = xbmcaddon.Addon()
             
+            xbmc.log('KING IPTV UpNext - Criando dialog customizado para controle remoto', xbmc.LOGINFO)
+            
             dialog = UpNextDialog(
                 'upnext-dialog.xml',
                 addon.getAddonInfo('path'),
@@ -337,6 +384,11 @@ class UpNextService:
             dialog.doModal()
             
             result = dialog.auto_play and not dialog.cancelled
+            
+            xbmc.log('KING IPTV UpNext - Dialog fechado: auto_play={}, cancelled={}, result={}'.format(
+                dialog.auto_play, dialog.cancelled, result
+            ), xbmc.LOGINFO)
+            
             del dialog
             return result
                 

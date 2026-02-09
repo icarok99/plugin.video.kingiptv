@@ -36,8 +36,6 @@ class KingPlayer(xbmc.Player):
         self.serie_name = None
         self.original_name = None
         
-        self.resume_point = 0
-        
         self._monitor = None
         self._tracking_thread = None
         self._stop_tracking = False
@@ -49,7 +47,7 @@ class KingPlayer(xbmc.Player):
         self.upnext_service = get_upnext_service(self, db)
     
     def start_playback(self, imdb_id, content_type, title, season=None, episode=None,
-                      thumbnail='', fanart='', description='', resume_point=0,
+                      thumbnail='', fanart='', description='',
                       serie_name='', original_name=''):
         
         with self._state_lock:
@@ -78,7 +76,6 @@ class KingPlayer(xbmc.Player):
             self.description = description
             self.serie_name = serie_name
             self.original_name = original_name
-            self.resume_point = resume_point
             self.is_tracking = True
             self._stop_tracking = False
             self._saved_at_90_percent = False
@@ -213,16 +210,12 @@ class KingPlayer(xbmc.Player):
                 serie_name = self.serie_name
                 original_name = self.original_name
             
+            watched_percent = (current_time / total_time) * 100
+            
             try:
-                watched_percent = (current_time / total_time) * 100 if total_time > 0 else 0
-                
-                xbmc.log('KING IPTV - Salvando progresso: {}% ({}s / {}s)'.format(
-                    int(watched_percent), int(current_time), int(total_time)
-                ), xbmc.LOGINFO)
-                
                 if content_type == 'episode':
                     if season is None or episode is None:
-                        xbmc.log('KING IPTV - Não é possível salvar: season ou episode é None', xbmc.LOGWARNING)
+                        xbmc.log('KING IPTV - Episódio sem season/episode definidos', xbmc.LOGWARNING)
                         return
                     
                     try:
@@ -421,9 +414,6 @@ def get_player():
 
 def start_tracking_episode(imdb_id, season, episode, title, thumbnail='', fanart='', 
                           description='', serie_name='', original_name=''):
-    progress = db.get_episode_progress(imdb_id, season, episode)
-    resume_point = progress['current_time'] if progress else 0
-    
     player = get_player()
     
     player.start_playback(
@@ -435,7 +425,6 @@ def start_tracking_episode(imdb_id, season, episode, title, thumbnail='', fanart
         thumbnail=thumbnail,
         fanart=fanart,
         description=description,
-        resume_point=resume_point,
         serie_name=serie_name,
         original_name=original_name
     )

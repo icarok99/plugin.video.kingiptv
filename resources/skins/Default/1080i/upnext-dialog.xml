@@ -91,7 +91,6 @@
                 <font>font13</font>
                 <textcolor>FFFFFFFF</textcolor>
                 <focusedcolor>FF00D9FF</focusedcolor>
-                <texturefocus colordiffuse="FF505050">button-focus.png</texturefocus>
                 <texturenofocus colordiffuse="FF505050">button-nofocus.png</texturenofocus>
                 <onleft>3002</onleft>
                 <onright>3002</onright>
@@ -109,7 +108,6 @@
                 <font>font13</font>
                 <textcolor>FFFFFFFF</textcolor>
                 <focusedcolor>FF00D9FF</focusedcolor>
-                <texturefocus colordiffuse="FF505050">button-focus.png</texturefocus>
                 <texturenofocus colordiffuse="FF505050">button-nofocus.png</texturenofocus>
                 <onleft>3001</onleft>
                 <onright>3001</onright>

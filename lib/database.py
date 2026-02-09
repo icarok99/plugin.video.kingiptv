@@ -99,6 +99,15 @@ class KingDatabase:
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_episodes_imdb ON episodes_progress(imdb_id)')
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_watching_imdb ON episode_watching(imdb_id)')
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_metadata_imdb_season ON episodes_metadata(imdb_id, season)')
+            
+            # Migration: Add is_last_episode column if it doesn't exist
+            cursor.execute("PRAGMA table_info(episodes_metadata)")
+            columns = [column[1] for column in cursor.fetchall()]
+            if 'is_last_episode' not in columns:
+                cursor.execute('''
+                    ALTER TABLE episodes_metadata 
+                    ADD COLUMN is_last_episode TEXT DEFAULT 'no'
+                ''')
     
     def save_episode_progress(self, imdb_id, season, episode, current_time, total_time,
                              title='', thumbnail='', fanart='', serie_name='', original_name=''):

@@ -21,14 +21,9 @@ class KingDatabase:
     
     def __init__(self):
         self.db_path = DATABASE_PATH
-        xbmc.log('KING IPTV DB - Inicializando database em: {}'.format(self.db_path), xbmc.LOGINFO)
         try:
             self._init_database()
-            xbmc.log('KING IPTV DB - Database inicializado com sucesso', xbmc.LOGINFO)
-        except Exception as e:
-            xbmc.log('KING IPTV DB - ERRO ao inicializar database: {}'.format(str(e)), xbmc.LOGERROR)
-            import traceback
-            xbmc.log(traceback.format_exc(), xbmc.LOGERROR)
+        except Exception:
             raise
     
     @contextmanager
@@ -48,7 +43,6 @@ class KingDatabase:
         with self._get_connection() as conn:
             cursor = conn.cursor()
             
-            # Tabela de progresso dos episódios (rastreamento de tempo)
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS episodes_progress (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -68,7 +62,6 @@ class KingDatabase:
                 )
             ''')
             
-            # Tabela para rastrear qual episódio está sendo assistido atualmente
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS episode_watching (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -77,8 +70,6 @@ class KingDatabase:
                     original_name TEXT,
                     current_season INTEGER NOT NULL,
                     current_episode INTEGER NOT NULL,
-                    next_season INTEGER,
-                    next_episode INTEGER,
                     thumbnail TEXT,
                     fanart TEXT,
                     last_played TEXT,
@@ -86,7 +77,6 @@ class KingDatabase:
                 )
             ''')
             
-            # Tabela de metadados dos episódios
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS episodes_metadata (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -99,34 +89,26 @@ class KingDatabase:
                     fanart TEXT,
                     serie_name TEXT,
                     original_name TEXT,
+                    is_last_episode TEXT DEFAULT 'no',
                     created_at TEXT,
                     updated_at TEXT,
                     UNIQUE(imdb_id, season, episode)
                 )
             ''')
             
-            # Criar índices para melhorar performance
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_episodes_imdb ON episodes_progress(imdb_id)')
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_watching_imdb ON episode_watching(imdb_id)')
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_metadata_imdb_season ON episodes_metadata(imdb_id, season)')
-            
-            xbmc.log('KING IPTV DB - Todas as tabelas e índices criados com sucesso', xbmc.LOGINFO)
     
     def save_episode_progress(self, imdb_id, season, episode, current_time, total_time,
                              title='', thumbnail='', fanart='', serie_name='', original_name=''):
-        """Salva progresso do episódio e atualiza qual episódio está sendo assistido"""
         watched_percent = (current_time / total_time * 100) if total_time > 0 else 0
         now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        
-        xbmc.log('KING IPTV DB - Salvando progresso: {} S{}E{} - {}s/{}s ({}%)'.format(
-            serie_name or title, season, episode, int(current_time), int(total_time), int(watched_percent)
-        ), xbmc.LOGINFO)
         
         try:
             with self._get_connection() as conn:
                 cursor = conn.cursor()
                 
-                # Salvar progresso do episódio
                 cursor.execute('''
                     INSERT INTO episodes_progress 
                     (imdb_id, season, episode, title, current_time, total_time, 
@@ -143,57 +125,28 @@ class KingDatabase:
                 ''', (imdb_id, season, episode, title, current_time, total_time,
                       watched_percent, thumbnail, fanart, now, now, now))
                 
-                xbmc.log('KING IPTV DB - Progresso salvo na tabela episodes_progress', xbmc.LOGINFO)
-                
-                # Calcular próximo episódio
-                cursor.execute('''
-                    SELECT season, episode
-                    FROM episodes_metadata
-                    WHERE imdb_id = ?
-                        AND (season > ? OR (season = ? AND episode > ?))
-                    ORDER BY season ASC, episode ASC
-                    LIMIT 1
-                ''', (imdb_id, season, season, episode))
-                
-                next_row = cursor.fetchone()
-                if next_row:
-                    next_season, next_episode = next_row[0], next_row[1]
-                else:
-                    # Se não houver próximo episódio, assumir episódio+1
-                    next_season = season
-                    next_episode = episode + 1
-                
-                # Atualizar episode_watching
                 cursor.execute('''
                     INSERT INTO episode_watching
                     (imdb_id, serie_name, original_name, current_season, current_episode,
-                     next_season, next_episode, thumbnail, fanart, last_played, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     thumbnail, fanart, last_played, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(imdb_id)
                     DO UPDATE SET
+                        serie_name = excluded.serie_name,
+                        original_name = excluded.original_name,
                         current_season = excluded.current_season,
                         current_episode = excluded.current_episode,
-                        next_season = excluded.next_season,
-                        next_episode = excluded.next_episode,
                         thumbnail = excluded.thumbnail,
                         fanart = excluded.fanart,
                         last_played = excluded.last_played,
                         updated_at = excluded.updated_at
                 ''', (imdb_id, serie_name, original_name, season, episode,
-                      next_season, next_episode, thumbnail, fanart, now, now))
+                      thumbnail, fanart, now, now))
                 
-                xbmc.log('KING IPTV DB - Episode watching atualizado: S{}E{} -> próximo S{}E{}'.format(
-                    season, episode, next_season, next_episode
-                ), xbmc.LOGINFO)
-                
-        except Exception as e:
-            xbmc.log('KING IPTV DB - Erro ao salvar progresso: {}'.format(str(e)), xbmc.LOGERROR)
-            import traceback
-            xbmc.log(traceback.format_exc(), xbmc.LOGERROR)
+        except Exception:
             raise
     
     def get_episode_progress(self, imdb_id, season, episode):
-        """Retorna o progresso de um episódio específico"""
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
@@ -207,7 +160,6 @@ class KingDatabase:
             return None
     
     def get_episode_watching(self, imdb_id):
-        """Retorna informações sobre qual episódio está sendo assistido"""
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
@@ -220,19 +172,55 @@ class KingDatabase:
                 return dict(row)
             return None
     
-    def save_season_episodes(self, imdb_id, season, serie_name, original_name, episodes_data):
-        """Salva metadados dos episódios de uma temporada"""
+    def get_next_episode_metadata(self, imdb_id, current_season, current_episode):
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                SELECT * FROM episodes_metadata
+                WHERE imdb_id = ? AND season = ? AND episode IN (?, ?)
+                ORDER BY episode
+            ''', (imdb_id, current_season, current_episode, current_episode + 1))
+            
+            rows = cursor.fetchall()
+            
+            if not rows:
+                return None
+            
+            current_ep = None
+            next_ep = None
+            
+            for row in rows:
+                row_dict = dict(row)
+                if row_dict['episode'] == current_episode:
+                    current_ep = row_dict
+                elif row_dict['episode'] == current_episode + 1:
+                    next_ep = row_dict
+            
+            if current_ep and current_ep.get('is_last_episode') == 'yes':
+                return None
+            
+            return next_ep
+    
+    def save_season_episodes(self, imdb_id, season, serie_name, original_name, episodes_data, last_episode_num=None):
         now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        
+        if last_episode_num is None:
+            last_episode_num = max([int(ep[0]) for ep in episodes_data])
         
         with self._get_connection() as conn:
             cursor = conn.cursor()
             
             for episode_num, title, thumbnail, fanart, description in episodes_data:
+                episode_num = int(episode_num)
+                is_last = 'yes' if episode_num == last_episode_num else 'no'
+                
                 cursor.execute('''
                     INSERT INTO episodes_metadata
                     (imdb_id, season, episode, episode_title, description, 
-                     thumbnail, fanart, serie_name, original_name, created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     thumbnail, fanart, serie_name, original_name, is_last_episode,
+                     created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(imdb_id, season, episode)
                     DO UPDATE SET
                         episode_title = excluded.episode_title,
@@ -241,12 +229,13 @@ class KingDatabase:
                         fanart = excluded.fanart,
                         serie_name = excluded.serie_name,
                         original_name = excluded.original_name,
+                        is_last_episode = excluded.is_last_episode,
                         updated_at = excluded.updated_at
-                ''', (imdb_id, season, int(episode_num), title, description,
-                      thumbnail, fanart, serie_name, original_name, now, now))
+                ''', (imdb_id, season, episode_num, title, description,
+                      thumbnail, fanart, serie_name, original_name, is_last,
+                      now, now))
     
     def get_season_episodes(self, imdb_id, season):
-        """Retorna os episódios de uma temporada"""
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
@@ -262,7 +251,6 @@ class KingDatabase:
             return episodes
     
     def get_episode_metadata(self, imdb_id, season, episode):
-        """Retorna metadados de um episódio"""
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''

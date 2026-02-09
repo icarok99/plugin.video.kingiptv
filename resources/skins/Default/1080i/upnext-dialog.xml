@@ -91,7 +91,7 @@
                 <font>font13</font>
                 <textcolor>FFFFFFFF</textcolor>
                 <focusedcolor>FFFFFFFF</focusedcolor>
-                <texturefocus>darkgrey.png</texturefocus>
+                <texturefocus>white10.png</texturefocus>
                 <texturenofocus></texturenofocus>
                 <onleft>3002</onleft>
                 <onright>3002</onright>
@@ -109,7 +109,7 @@
                 <font>font13</font>
                 <textcolor>FFFFFFFF</textcolor>
                 <focusedcolor>FFFFFFFF</focusedcolor>
-                <texturefocus>darkgrey.png</texturefocus>
+                <texturefocus>white10.png</texturefocus>
                 <texturenofocus></texturenofocus>
                 <onleft>3001</onleft>
                 <onright>3001</onright>

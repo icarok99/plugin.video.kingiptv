@@ -100,7 +100,6 @@ class KingDatabase:
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_watching_imdb ON episode_watching(imdb_id)')
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_metadata_imdb_season ON episodes_metadata(imdb_id, season)')
             
-            # Migration: Add is_last_episode column if it doesn't exist
             cursor.execute("PRAGMA table_info(episodes_metadata)")
             columns = [column[1] for column in cursor.fetchall()]
             if 'is_last_episode' not in columns:
@@ -212,6 +211,9 @@ class KingDatabase:
             return next_ep
     
     def save_season_episodes(self, imdb_id, season, serie_name, original_name, episodes_data, last_episode_num=None):
+        if not episodes_data:
+            return
+        
         now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         
         if last_episode_num is None:
@@ -220,29 +222,43 @@ class KingDatabase:
         with self._get_connection() as conn:
             cursor = conn.cursor()
             
+            batch_data = []
             for episode_num, title, thumbnail, fanart, description in episodes_data:
                 episode_num = int(episode_num)
                 is_last = 'yes' if episode_num == last_episode_num else 'no'
                 
-                cursor.execute('''
-                    INSERT INTO episodes_metadata
-                    (imdb_id, season, episode, episode_title, description, 
-                     thumbnail, fanart, serie_name, original_name, is_last_episode,
-                     created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(imdb_id, season, episode)
-                    DO UPDATE SET
-                        episode_title = excluded.episode_title,
-                        description = excluded.description,
-                        thumbnail = excluded.thumbnail,
-                        fanart = excluded.fanart,
-                        serie_name = excluded.serie_name,
-                        original_name = excluded.original_name,
-                        is_last_episode = excluded.is_last_episode,
-                        updated_at = excluded.updated_at
-                ''', (imdb_id, season, episode_num, title, description,
-                      thumbnail, fanart, serie_name, original_name, is_last,
-                      now, now))
+                batch_data.append((
+                    imdb_id, 
+                    season, 
+                    episode_num, 
+                    title, 
+                    description,
+                    thumbnail, 
+                    fanart, 
+                    serie_name, 
+                    original_name, 
+                    is_last,
+                    now,
+                    now
+                ))
+            
+            cursor.executemany('''
+                INSERT INTO episodes_metadata
+                (imdb_id, season, episode, episode_title, description, 
+                 thumbnail, fanart, serie_name, original_name, is_last_episode,
+                 created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(imdb_id, season, episode)
+                DO UPDATE SET
+                    episode_title = excluded.episode_title,
+                    description = excluded.description,
+                    thumbnail = excluded.thumbnail,
+                    fanart = excluded.fanart,
+                    serie_name = excluded.serie_name,
+                    original_name = excluded.original_name,
+                    is_last_episode = excluded.is_last_episode,
+                    updated_at = excluded.updated_at
+            ''', batch_data)
     
     def get_season_episodes(self, imdb_id, season):
         with self._get_connection() as conn:

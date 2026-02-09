@@ -90,7 +90,8 @@
                 <label>Reproduzir (10s)</label>
                 <font>font13</font>
                 <textcolor>FFFFFFFF</textcolor>
-                <texturefocus colordiffuse="FF00D9FF">button-focus.png</texturefocus>
+                <focusedcolor>FF000000</focusedcolor>
+                <texturefocus border="8">white.png</texturefocus>
                 <texturenofocus colordiffuse="FF505050">button-nofocus.png</texturenofocus>
                 <onleft>3002</onleft>
                 <onright>3002</onright>
@@ -107,7 +108,8 @@
                 <label>Cancelar</label>
                 <font>font13</font>
                 <textcolor>FFFFFFFF</textcolor>
-                <texturefocus colordiffuse="FFFF5555">button-focus.png</texturefocus>
+                <focusedcolor>FF000000</focusedcolor>
+                <texturefocus border="8">white.png</texturefocus>
                 <texturenofocus colordiffuse="FF505050">button-nofocus.png</texturenofocus>
                 <onleft>3001</onleft>
                 <onright>3001</onright>

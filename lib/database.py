@@ -41,9 +41,7 @@ class KingDatabase:
     
     def _init_database(self):
         with self._get_connection() as conn:
-            cursor = conn.cursor()
-            
-            cursor.execute('''
+            conn.executescript('''
                 CREATE TABLE IF NOT EXISTS episodes_progress (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     imdb_id TEXT NOT NULL,
@@ -59,10 +57,8 @@ class KingDatabase:
                     created_at TEXT,
                     updated_at TEXT,
                     UNIQUE(imdb_id, season, episode)
-                )
-            ''')
-            
-            cursor.execute('''
+                );
+                
                 CREATE TABLE IF NOT EXISTS episode_watching (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     imdb_id TEXT NOT NULL UNIQUE,
@@ -74,10 +70,8 @@ class KingDatabase:
                     fanart TEXT,
                     last_played TEXT,
                     updated_at TEXT
-                )
-            ''')
-            
-            cursor.execute('''
+                );
+                
                 CREATE TABLE IF NOT EXISTS episodes_metadata (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     imdb_id TEXT NOT NULL,
@@ -93,13 +87,16 @@ class KingDatabase:
                     created_at TEXT,
                     updated_at TEXT,
                     UNIQUE(imdb_id, season, episode)
-                )
+                );
+                
+                CREATE INDEX IF NOT EXISTS idx_episodes_imdb ON episodes_progress(imdb_id);
+                CREATE INDEX IF NOT EXISTS idx_episodes_season ON episodes_progress(imdb_id, season);
+                CREATE INDEX IF NOT EXISTS idx_watching_imdb ON episode_watching(imdb_id);
+                CREATE INDEX IF NOT EXISTS idx_metadata_imdb_season ON episodes_metadata(imdb_id, season);
+                CREATE INDEX IF NOT EXISTS idx_metadata_episode ON episodes_metadata(imdb_id, season, episode);
             ''')
             
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_episodes_imdb ON episodes_progress(imdb_id)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_watching_imdb ON episode_watching(imdb_id)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_metadata_imdb_season ON episodes_metadata(imdb_id, season)')
-            
+            cursor = conn.cursor()
             cursor.execute("PRAGMA table_info(episodes_metadata)")
             columns = [column[1] for column in cursor.fetchall()]
             if 'is_last_episode' not in columns:
@@ -158,57 +155,51 @@ class KingDatabase:
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
-                SELECT * FROM episodes_progress
+                SELECT imdb_id, season, episode, title, current_time, total_time, 
+                       watched_percent, thumbnail, fanart, last_played, created_at, updated_at
+                FROM episodes_progress
                 WHERE imdb_id = ? AND season = ? AND episode = ?
             ''', (imdb_id, season, episode))
             
             row = cursor.fetchone()
-            if row:
-                return dict(row)
-            return None
+            return dict(row) if row else None
     
     def get_episode_watching(self, imdb_id):
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
-                SELECT * FROM episode_watching
+                SELECT imdb_id, serie_name, original_name, current_season, current_episode,
+                       thumbnail, fanart, last_played, updated_at
+                FROM episode_watching
                 WHERE imdb_id = ?
             ''', (imdb_id,))
             
             row = cursor.fetchone()
-            if row:
-                return dict(row)
-            return None
+            return dict(row) if row else None
     
     def get_next_episode_metadata(self, imdb_id, current_season, current_episode):
         with self._get_connection() as conn:
             cursor = conn.cursor()
             
             cursor.execute('''
-                SELECT * FROM episodes_metadata
+                SELECT imdb_id, season, episode, episode_title, description, thumbnail, 
+                       fanart, serie_name, original_name, is_last_episode, created_at, updated_at
+                FROM episodes_metadata
                 WHERE imdb_id = ? AND season = ? AND episode IN (?, ?)
                 ORDER BY episode
             ''', (imdb_id, current_season, current_episode, current_episode + 1))
             
-            rows = cursor.fetchall()
+            rows = [dict(row) for row in cursor.fetchall()]
             
             if not rows:
                 return None
             
-            current_ep = None
-            next_ep = None
-            
-            for row in rows:
-                row_dict = dict(row)
-                if row_dict['episode'] == current_episode:
-                    current_ep = row_dict
-                elif row_dict['episode'] == current_episode + 1:
-                    next_ep = row_dict
+            current_ep = next((row for row in rows if row['episode'] == current_episode), None)
             
             if current_ep and current_ep.get('is_last_episode') == 'yes':
                 return None
             
-            return next_ep
+            return next((row for row in rows if row['episode'] == current_episode + 1), None)
     
     def save_season_episodes(self, imdb_id, season, serie_name, original_name, episodes_data, last_episode_num=None):
         if not episodes_data:
@@ -217,30 +208,28 @@ class KingDatabase:
         now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         
         if last_episode_num is None:
-            last_episode_num = max([int(ep[0]) for ep in episodes_data])
+            last_episode_num = max(int(ep[0]) for ep in episodes_data)
         
         with self._get_connection() as conn:
             cursor = conn.cursor()
             
-            batch_data = []
-            for episode_num, title, thumbnail, fanart, description in episodes_data:
-                episode_num = int(episode_num)
-                is_last = 'yes' if episode_num == last_episode_num else 'no'
-                
-                batch_data.append((
+            batch_data = [
+                (
                     imdb_id, 
                     season, 
-                    episode_num, 
+                    int(episode_num), 
                     title, 
                     description,
                     thumbnail, 
                     fanart, 
                     serie_name, 
                     original_name, 
-                    is_last,
+                    'yes' if int(episode_num) == last_episode_num else 'no',
                     now,
                     now
-                ))
+                )
+                for episode_num, title, thumbnail, fanart, description in episodes_data
+            ]
             
             cursor.executemany('''
                 INSERT INTO episodes_metadata
@@ -264,26 +253,24 @@ class KingDatabase:
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
-                SELECT * FROM episodes_metadata
+                SELECT imdb_id, season, episode, episode_title, description, thumbnail,
+                       fanart, serie_name, original_name, is_last_episode, created_at, updated_at
+                FROM episodes_metadata
                 WHERE imdb_id = ? AND season = ?
                 ORDER BY episode
             ''', (imdb_id, season))
             
-            episodes = []
-            for row in cursor.fetchall():
-                episodes.append(dict(row))
-            
-            return episodes
+            return [dict(row) for row in cursor.fetchall()]
     
     def get_episode_metadata(self, imdb_id, season, episode):
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
-                SELECT * FROM episodes_metadata
+                SELECT imdb_id, season, episode, episode_title, description, thumbnail,
+                       fanart, serie_name, original_name, is_last_episode, created_at, updated_at
+                FROM episodes_metadata
                 WHERE imdb_id = ? AND season = ? AND episode = ?
             ''', (imdb_id, season, episode))
             
             row = cursor.fetchone()
-            if row:
-                return dict(row)
-            return None
+            return dict(row) if row else None

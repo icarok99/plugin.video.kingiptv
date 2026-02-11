@@ -44,40 +44,6 @@ class KingDatabase:
             cursor = conn.cursor()
             
             cursor.execute('''
-                CREATE TABLE IF NOT EXISTS episodes_progress (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    imdb_id TEXT NOT NULL,
-                    season INTEGER NOT NULL,
-                    episode INTEGER NOT NULL,
-                    title TEXT,
-                    current_time REAL DEFAULT 0,
-                    total_time REAL DEFAULT 0,
-                    watched_percent REAL DEFAULT 0,
-                    thumbnail TEXT,
-                    fanart TEXT,
-                    last_played TEXT,
-                    created_at TEXT,
-                    updated_at TEXT,
-                    UNIQUE(imdb_id, season, episode)
-                )
-            ''')
-            
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS episode_watching (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    imdb_id TEXT NOT NULL UNIQUE,
-                    serie_name TEXT,
-                    original_name TEXT,
-                    current_season INTEGER NOT NULL,
-                    current_episode INTEGER NOT NULL,
-                    thumbnail TEXT,
-                    fanart TEXT,
-                    last_played TEXT,
-                    updated_at TEXT
-                )
-            ''')
-            
-            cursor.execute('''
                 CREATE TABLE IF NOT EXISTS episodes_metadata (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     imdb_id TEXT NOT NULL,
@@ -96,8 +62,6 @@ class KingDatabase:
                 )
             ''')
             
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_episodes_imdb ON episodes_progress(imdb_id)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_watching_imdb ON episode_watching(imdb_id)')
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_metadata_imdb_season ON episodes_metadata(imdb_id, season)')
             
             cursor.execute("PRAGMA table_info(episodes_metadata)")
@@ -107,78 +71,6 @@ class KingDatabase:
                     ALTER TABLE episodes_metadata 
                     ADD COLUMN is_last_episode TEXT DEFAULT 'no'
                 ''')
-    
-    def save_episode_progress(self, imdb_id, season, episode, current_time, total_time,
-                             title='', thumbnail='', fanart='', serie_name='', original_name=''):
-        watched_percent = (current_time / total_time * 100) if total_time > 0 else 0
-        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        
-        try:
-            with self._get_connection() as conn:
-                cursor = conn.cursor()
-                
-                cursor.execute('''
-                    INSERT INTO episodes_progress 
-                    (imdb_id, season, episode, title, current_time, total_time, 
-                     watched_percent, thumbnail, fanart, last_played, 
-                     created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(imdb_id, season, episode) 
-                    DO UPDATE SET
-                        current_time = excluded.current_time,
-                        total_time = excluded.total_time,
-                        watched_percent = excluded.watched_percent,
-                        last_played = excluded.last_played,
-                        updated_at = excluded.updated_at
-                ''', (imdb_id, season, episode, title, current_time, total_time,
-                      watched_percent, thumbnail, fanart, now, now, now))
-                
-                cursor.execute('''
-                    INSERT INTO episode_watching
-                    (imdb_id, serie_name, original_name, current_season, current_episode,
-                     thumbnail, fanart, last_played, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(imdb_id)
-                    DO UPDATE SET
-                        serie_name = excluded.serie_name,
-                        original_name = excluded.original_name,
-                        current_season = excluded.current_season,
-                        current_episode = excluded.current_episode,
-                        thumbnail = excluded.thumbnail,
-                        fanart = excluded.fanart,
-                        last_played = excluded.last_played,
-                        updated_at = excluded.updated_at
-                ''', (imdb_id, serie_name, original_name, season, episode,
-                      thumbnail, fanart, now, now))
-                
-        except Exception:
-            raise
-    
-    def get_episode_progress(self, imdb_id, season, episode):
-        with self._get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                SELECT * FROM episodes_progress
-                WHERE imdb_id = ? AND season = ? AND episode = ?
-            ''', (imdb_id, season, episode))
-            
-            row = cursor.fetchone()
-            if row:
-                return dict(row)
-            return None
-    
-    def get_episode_watching(self, imdb_id):
-        with self._get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                SELECT * FROM episode_watching
-                WHERE imdb_id = ?
-            ''', (imdb_id,))
-            
-            row = cursor.fetchone()
-            if row:
-                return dict(row)
-            return None
     
     def get_next_episode_metadata(self, imdb_id, current_season, current_episode):
         with self._get_connection() as conn:

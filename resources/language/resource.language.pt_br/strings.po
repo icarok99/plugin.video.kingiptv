@@ -1,0 +1,178 @@
+# King IPTV - Portuguese (Brazil) strings
+# Kodi Media Center language file
+
+msgid ""
+msgstr ""
+"Project-Id-Version: King IPTV\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-02-07 00:00+0000\n"
+"PO-Revision-Date: 2025-02-07 00:00+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: pt_BR\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+# General / Menu strings (32000-32099)
+msgctxt "#32000"
+msgid "IPTV Lists"
+msgstr "LISTAS IPTV"
+
+msgctxt "#32001"
+msgid "Pluto Channels"
+msgstr "CANAIS PLUTO"
+
+msgctxt "#32002"
+msgid "Radios"
+msgstr "RADIOS"
+
+msgctxt "#32003"
+msgid "IMDB Movies"
+msgstr "IMDB Filmes"
+
+msgctxt "#32004"
+msgid "IMDB TV shows"
+msgstr "IMDB Series"
+
+msgctxt "#32005"
+msgid "Settings"
+msgstr "Configurações"
+
+msgctxt "#32006"
+msgid "Search Movie"
+msgstr "Pesquisar Filme"
+
+msgctxt "#32007"
+msgid "Top 250 Movies"
+msgstr "Top 250 Filmes"
+
+msgctxt "#32008"
+msgid "Popular Movies"
+msgstr "Filmes Populares"
+
+msgctxt "#32009"
+msgid "Search TV shows"
+msgstr "Pesquisar Série"
+
+msgctxt "#32010"
+msgid "Top 250 TV shows"
+msgstr "Top 250 Séries"
+
+msgctxt "#32011"
+msgid "Popular TV shows"
+msgstr "Séries Populares"
+
+msgctxt "#32012"
+msgid "Next Page"
+msgstr "Próxima Página"
+
+msgctxt "#32013"
+msgid "No IPTV list"
+msgstr "Sem lista iptv"
+
+msgctxt "#32014"
+msgid "List Offline"
+msgstr "Lista Offline"
+
+msgctxt "#32015"
+msgid "Option unavailable"
+msgstr "Opção indisponivel"
+
+msgctxt "#32016"
+msgid "Stream Unavailable"
+msgstr "Stream Indisponivel"
+
+msgctxt "#32017"
+msgid "No radios"
+msgstr "Sem radios"
+
+msgctxt "#32018"
+msgid "No channels"
+msgstr "Sem canais"
+
+msgctxt "#32019"
+msgid "Please wait"
+msgstr "Aguarde"
+
+msgctxt "#32020"
+msgid "Choose Portuguese audio in settings"
+msgstr "Escolha o audio portugues nos ajustes"
+
+msgctxt "#32021"
+msgid "Error: Invalid parameters"
+msgstr "Erro: Parâmetros inválidos"
+
+msgctxt "#32022"
+msgid "Error: Invalid episode/season number"
+msgstr "Erro: Número de episódio/temporada inválido"
+
+msgctxt "#32023"
+msgid "Updating..."
+msgstr "Atualizando..."
+
+msgctxt "#32024"
+msgid "Updated successfully!"
+msgstr "Atualizado com sucesso!"
+
+msgctxt "#32025"
+msgid "Auto-update error"
+msgstr "Erro na atualização automática"
+
+msgctxt "#32026"
+msgid "Update error"
+msgstr "Erro na atualização"
+
+msgctxt "#32027"
+msgid "Enter movie name"
+msgstr "Digite o nome do filme"
+
+msgctxt "#32028"
+msgid "Enter TV show name"
+msgstr "Digite o nome da série"
+
+msgctxt "#32029"
+msgid "IPTV Channel"
+msgstr "Canal IPTV"
+
+# Up Next Category (32100-32199)
+msgctxt "#32100"
+msgid "Up Next"
+msgstr "A seguir"
+
+msgctxt "#32101"
+msgid "Enable Up Next"
+msgstr "Ativar A seguir"
+
+msgctxt "#32102"
+msgid "Show notification when remaining (seconds)"
+msgstr "Mostrar notificação quando restarem (segundos)"
+
+msgctxt "#32103"
+msgid "Countdown timer duration (seconds)"
+msgstr "Duração do contador regressivo (segundos)"
+
+msgctxt "#32104"
+msgid "Use visual dialog"
+msgstr "Usar diálogo visual"
+
+msgctxt "#32105"
+msgid "Testing and Debug"
+msgstr "Testes e Debug"
+
+msgctxt "#32106"
+msgid "Test Up Next notification"
+msgstr "Testar notificação A seguir"
+
+# Up Next Dialog strings (32107-32109)
+msgctxt "#32107"
+msgid "Next Episode"
+msgstr "Próximo Episódio"
+
+msgctxt "#32108"
+msgid "Play ({0}s)"
+msgstr "Reproduzir ({0}s)"
+
+msgctxt "#32109"
+msgid "Cancel"
+msgstr "Cancelar"

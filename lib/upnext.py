@@ -6,6 +6,13 @@ import threading
 import time
 from datetime import datetime
 
+import xbmcaddon as _xbmcaddon
+_addon = _xbmcaddon.Addon()
+
+def getString(string_id):
+    return _addon.getLocalizedString(string_id)
+
+
 class UpNextDialog(xbmcgui.WindowXMLDialog):
     
     BUTTON_PLAY_NOW = 3001
@@ -64,7 +71,7 @@ class UpNextDialog(xbmcgui.WindowXMLDialog):
                 progress = int(((self.countdown_seconds - remaining) / float(self.countdown_seconds)) * 100)
                 self.getControl(self.PROGRESS_BAR).setPercent(progress)
                 
-                self.getControl(self.BUTTON_PLAY_NOW).setLabel('Reproduzir ({}s)'.format(remaining))
+                self.getControl(self.BUTTON_PLAY_NOW).setLabel(getString(32108).format(remaining))
                 
                 time.sleep(1)
                 remaining -= 1

@@ -16,6 +16,12 @@ from lib.database import KingDatabase
 
 db = KingDatabase()
 
+_addon = xbmcaddon.Addon()
+
+def getString(string_id):
+    return _addon.getLocalizedString(string_id)
+
+
 profile = xbmcvfs.translatePath('special://profile/addon_data/plugin.video.kingiptv')
 
 try:
@@ -31,7 +37,7 @@ try:
             with open(UPDATE_CHECK_FILE, 'r') as f:
                 return datetime.strptime(f.read().strip(), '%d-%m-%Y')
         except:
-            return datetime.strptime('07-02-2026', '%d-%m-%Y')
+            return datetime.strptime('14-02-2026', '%d-%m-%Y')
 
     def save_local_date(date_str):
         with open(UPDATE_CHECK_FILE, 'w') as f:
@@ -53,7 +59,7 @@ try:
 
 except Exception as e:
     from xbmcgui import Dialog
-    Dialog().notification('Erro na atualização automática', str(e), xbmcgui.NOTIFICATION_ERROR, 5000)
+    Dialog().notification(getString(32025), str(e), xbmcgui.NOTIFICATION_ERROR, 5000)
 
 TITULO = '::: KING IPTV :::'
 API_CHANNELS = '\x68\x74\x74\x70\x73\x3a\x2f\x2f\x64\x6f\x63\x73\x2e\x67\x6f\x6f\x67\x6c\x65\x2e\x63\x6f\x6d\x2f\x75\x63\x3f\x65\x78\x70\x6f\x72\x74\x3d\x64\x6f\x77\x6e\x6c\x6f\x61\x64\x26\x69\x64\x3d\x31\x67\x52\x53\x61\x72\x30\x49\x79\x32\x6f\x47\x65\x70\x4c\x33\x4c\x6b\x4d\x74\x43\x62\x77\x54\x7a\x67\x53\x67\x68\x41\x73\x77\x36'
@@ -71,20 +77,20 @@ def index():
     try:
         if is_update_needed_by_date():
             from xbmcgui import Dialog
-            Dialog().notification('KING IPTV', 'Atualizando...', xbmcgui.NOTIFICATION_INFO, 5000)
+            Dialog().notification('KING IPTV', getString(32023), xbmcgui.NOTIFICATION_INFO, 5000)
             github_update.update_files()
-            Dialog().notification('KING IPTV', 'Atualizado com sucesso!', xbmcgui.NOTIFICATION_INFO, 5000)
+            Dialog().notification('KING IPTV', getString(32024), xbmcgui.NOTIFICATION_INFO, 5000)
     except Exception as e:
         from xbmcgui import Dialog
-        Dialog().notification('KING IPTV', f'Erro na atualização: {e}', xbmcgui.NOTIFICATION_ERROR, 5000)
+        Dialog().notification('KING IPTV', '{}: {}'.format(getString(32026), e), xbmcgui.NOTIFICATION_ERROR, 5000)
 
     addMenuItem({'name': TITULO, 'description': ''}, destiny='')
-    addMenuItem({'name': 'LISTAS IPTV', 'description': ''}, destiny='/playlistiptv')
-    addMenuItem({'name': 'CANAIS PLUTO', 'description': ''}, destiny='/channels_pluto')
-    addMenuItem({'name': 'RADIOS', 'description': ''}, destiny='/radios')
-    addMenuItem({'name': 'IMDB Filmes', 'description': ''}, destiny='/imdb_movies')
-    addMenuItem({'name': 'IMDB Series', 'description': ''}, destiny='/imdb_series')
-    addMenuItem({'name': 'Configurações'}, destiny='/settings')
+    addMenuItem({'name': getString(32000), 'description': ''}, destiny='/playlistiptv')
+    addMenuItem({'name': getString(32001), 'description': ''}, destiny='/channels_pluto')
+    addMenuItem({'name': getString(32002), 'description': ''}, destiny='/radios')
+    addMenuItem({'name': getString(32003), 'description': ''}, destiny='/imdb_movies')
+    addMenuItem({'name': getString(32004), 'description': ''}, destiny='/imdb_series')
+    addMenuItem({'name': getString(32005)}, destiny='/settings')
     end()
     setview('WideList')
 
@@ -103,7 +109,7 @@ def playlistiptv():
         end()
         setview('WideList') 
     else:
-        notify('Sem lista iptv')
+        notify(getString(32013))
 
 @route('/cat_channels')
 def cat_channels(param):
@@ -134,7 +140,7 @@ def cat_channels(param):
         with open_file(IPTV_PROBLEM_LOG, "a") as arquivo:
             if not check:
                 arquivo.write(url_problem)
-        notify('Lista Offline')
+        notify(getString(32014))
 
 @route('/open_channels')
 def open_channels(param):
@@ -151,11 +157,11 @@ def open_channels(param):
         end()
         setview('WideList')
     else:
-        notify('Opção indisponivel')
+        notify(getString(32015))
 
 @route('/play_iptv')
 def play_iptv(param):
-    name = param.get('name', 'Canal IPTV')
+    name = param.get('name', getString(32029))
     description = param.get('description', '')
     iconimage = param.get('iconimage', '')
     url = param.get('url', '')
@@ -187,7 +193,7 @@ def channels_pluto():
         end()
         setview('List')
     else:
-        notify('Sem canais')
+        notify(getString(32018))
 
 @route('/play_pluto')
 def play_pluto(param):
@@ -210,7 +216,7 @@ def play_pluto(param):
             play_item.setInfo('video', {'title': name, 'plot': description})
         xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, play_item)
     else:
-        notify('Stream Indisponivel')
+        notify(getString(32016))
 
 @route('/radios')
 def radios():
@@ -222,7 +228,7 @@ def radios():
         end()
         setview('List')
     else:
-        notify('Sem radios')
+        notify(getString(32017))
 
 @route('/play_radio')
 def play_radio(param):
@@ -242,23 +248,23 @@ def play_radio(param):
 
 @route('/imdb_movies')
 def imdb_movies():
-    addMenuItem({'name': 'Pesquisar Filmes', 'description': ''}, destiny='/find_movies')
-    addMenuItem({'name': 'Top 250 Filmes', 'description': ''}, destiny='/imdb_movies_250')
-    addMenuItem({'name': 'Filmes Populares', 'description': ''}, destiny='/imdb_movies_popular')
+    addMenuItem({'name': getString(32006), 'description': ''}, destiny='/find_movies')
+    addMenuItem({'name': getString(32007), 'description': ''}, destiny='/imdb_movies_250')
+    addMenuItem({'name': getString(32008), 'description': ''}, destiny='/imdb_movies_popular')
     end()
     setview('List')
 
 @route('/imdb_series')
 def imdb_series():
-    addMenuItem({'name': 'Pesquisar Series', 'description': ''}, destiny='/find_series')
-    addMenuItem({'name': 'Top 250 Series', 'description': ''}, destiny='/imdb_series_250')
-    addMenuItem({'name': 'Series Populares', 'description': ''}, destiny='/imdb_series_popular')
+    addMenuItem({'name': getString(32009), 'description': ''}, destiny='/find_series')
+    addMenuItem({'name': getString(32010), 'description': ''}, destiny='/imdb_series_250')
+    addMenuItem({'name': getString(32011), 'description': ''}, destiny='/imdb_series_popular')
     end()
     setview('List')
 
 @route('/find_movies')
 def find_movies():
-    keyboard = xbmc.Keyboard('', 'Digite o nome do filme')
+    keyboard = xbmc.Keyboard('', getString(32027))
     keyboard.doModal()
     if keyboard.isConfirmed():
         query = keyboard.getText()
@@ -284,7 +290,7 @@ def find_movies():
 
 @route('/find_series')
 def find_series():
-    keyboard = xbmc.Keyboard('', 'Digite o nome da série')
+    keyboard = xbmc.Keyboard('', getString(32028))
     keyboard.doModal()
     if keyboard.isConfirmed():
         query = keyboard.getText()
@@ -328,7 +334,7 @@ def movies_250(param=None):
                 'playable': True
             }, destiny='/play_resolve_movies', folder=False)
         if end_ < len(all_items):
-            addMenuItem({'name': 'Próxima Página', 'page': page + 1}, destiny='/imdb_movies_250')
+            addMenuItem({'name': getString(32012), 'page': page + 1}, destiny='/imdb_movies_250')
         end()
         setview('List')
 
@@ -353,7 +359,7 @@ def series_250(param=None):
                 'original_name': original_name
             }, destiny='/open_imdb_seasons')
         if end_ < len(all_items):
-            addMenuItem({'name': 'Próxima Página', 'page': page + 1}, destiny='/imdb_series_250')
+            addMenuItem({'name': getString(32012), 'page': page + 1}, destiny='/imdb_series_250')
         end()
         setview('List')
 
@@ -380,7 +386,7 @@ def movies_popular(param=None):
                 'playable': True
             }, destiny='/play_resolve_movies', folder=False)
         if end_ < len(all_items):
-            addMenuItem({'name': 'Próxima Página', 'page': page + 1}, destiny='/imdb_movies_popular')
+            addMenuItem({'name': getString(32012), 'page': page + 1}, destiny='/imdb_movies_popular')
         end()
         setview('List')
 
@@ -405,7 +411,7 @@ def series_popular(param=None):
                 'original_name': original_name
             }, destiny='/open_imdb_seasons')
         if end_ < len(all_items):
-            addMenuItem({'name': 'Próxima Página', 'page': page + 1}, destiny='/imdb_series_popular')
+            addMenuItem({'name': getString(32012), 'page': page + 1}, destiny='/imdb_series_popular')
         end()
         setview('List')
 
@@ -476,7 +482,7 @@ def open_imdb_episodes(param):
 
 @route('/play_resolve_movies')
 def play_resolve_movies(param):
-    notify('Aguarde')
+    notify(getString(32019))
     
     movie_name = param.get('movie_name', param.get('name', ''))
     iconimage = param.get('iconimage', '')
@@ -533,14 +539,14 @@ def play_resolve_movies(param):
                 info_dict['year'] = int(year)
             play_item.setInfo('video', info_dict)
 
-        notify('Escolha o audio portugues nos ajustes')
+        notify(getString(32020))
         xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, play_item)
     else:
-        notify('Stream Indisponivel')
+        notify(getString(32016))
 
 @route('/play_resolve_series')
 def play_resolve_series(param):
-    notify('Aguarde')
+    notify(getString(32019))
     
     serie_name = param.get('serie_name', '')
     original_name = param.get('original_name', '')
@@ -554,14 +560,14 @@ def play_resolve_series(param):
     from_upnext = param.get('from_upnext', 'false')
     
     if not episode or not season:
-        notify('Erro: Parâmetros inválidos')
+        notify(getString(32021))
         return
     
     try:
         current_episode_num = int(episode)
         season_num = int(season)
     except (ValueError, TypeError) as e:
-        notify('Erro: Número de episódio/temporada inválido')
+        notify(getString(32022))
         return
 
     start_tracking_episode(
@@ -627,7 +633,7 @@ def play_resolve_series(param):
             }
             play_item.setInfo('video', info_dict)
 
-        notify('Escolha o audio portugues nos ajustes')
+        notify(getString(32020))
         xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, play_item)
     else:
-        notify('Stream Indisponivel')
+        notify(getString(32016))

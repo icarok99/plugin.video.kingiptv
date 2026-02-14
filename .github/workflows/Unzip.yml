@@ -22,14 +22,14 @@ jobs:
 
       - name: Verificar se o ZIP existe
         run: |
-          if [ ! -f plugin.video.kingiptv-0.0.6.zip ]; then
-            echo "❌ Arquivo plugin.video.kingiptv-0.0.6.zip não encontrado."
+          if [ ! -f plugin.video.kingiptv.zip ]; then
+            echo "❌ Arquivo plugin.video.kingiptv.zip não encontrado."
             exit 1
           fi
 
       - name: Extrair ZIP na raiz
         run: |
-          unzip -o plugin.video.kingiptv-0.0.6.zip
+          unzip -o plugin.video.kingiptv.zip
           chmod -R u+rwX,go+rX .
 
       - name: Configurar Git

@@ -52,7 +52,7 @@ msgid "Popular Movies"
 msgstr "Filmes Populares"
 
 msgctxt "#32009"
-msgid "Search TV shows"
+msgid "Search TV show"
 msgstr "Pesquisar Série"
 
 msgctxt "#32010"

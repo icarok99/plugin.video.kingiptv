@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<settings>
+
+    <category label="32100">
+        <setting id="upnext_enabled" type="bool" label="32101" default="true" />
+        <setting id="upnext_trigger_seconds" type="number" label="32102" default="30" />
+        <setting id="upnext_countdown_seconds" type="number" label="32103" default="10" />
+    </category>
+
+</settings>

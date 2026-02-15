@@ -1,0 +1,170 @@
+# King IPTV - Portuguese (Brazil) strings
+# Kodi Media Center language file
+
+msgid ""
+msgstr ""
+"Project-Id-Version: King IPTV\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-02-07 00:00+0000\n"
+"PO-Revision-Date: 2025-02-07 00:00+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: pt_BR\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+# General / Menu strings (32000-32099)
+msgctxt "#32000"
+msgid "IPTV Lists"
+msgstr "Listas IPTV"
+
+msgctxt "#32001"
+msgid "Pluto Channels"
+msgstr "Canais Pluto"
+
+msgctxt "#32002"
+msgid "Radios"
+msgstr "Rádios"
+
+msgctxt "#32003"
+msgid "IMDB Movies"
+msgstr "IMDB Filmes"
+
+msgctxt "#32004"
+msgid "IMDB TV shows"
+msgstr "IMDB Séries"
+
+msgctxt "#32005"
+msgid "Settings"
+msgstr "Configurações"
+
+msgctxt "#32006"
+msgid "Search Movie"
+msgstr "Pesquisar Filme"
+
+msgctxt "#32007"
+msgid "Top 250 Movies"
+msgstr "Top 250 Filmes"
+
+msgctxt "#32008"
+msgid "Popular Movies"
+msgstr "Filmes Populares"
+
+msgctxt "#32009"
+msgid "Search TV show"
+msgstr "Pesquisar Série"
+
+msgctxt "#32010"
+msgid "Top 250 TV shows"
+msgstr "Top 250 Séries"
+
+msgctxt "#32011"
+msgid "Popular TV shows"
+msgstr "Séries Populares"
+
+msgctxt "#32012"
+msgid "Next Page"
+msgstr "Próxima Página"
+
+msgctxt "#32013"
+msgid "No IPTV list"
+msgstr "Nenhuma lista IPTV"
+
+msgctxt "#32014"
+msgid "List Offline"
+msgstr "Lista Offline"
+
+msgctxt "#32015"
+msgid "Option unavailable"
+msgstr "Opção indisponível"
+
+msgctxt "#32016"
+msgid "Stream Unavailable"
+msgstr "Stream Indisponível"
+
+msgctxt "#32017"
+msgid "No radios"
+msgstr "Nenhuma rádio"
+
+msgctxt "#32018"
+msgid "No channels"
+msgstr "Nenhum canal"
+
+msgctxt "#32020"
+msgid "Choose Portuguese audio in settings"
+msgstr "Escolha áudio em português nas configurações"
+
+msgctxt "#32021"
+msgid "Error: Invalid parameters"
+msgstr "Erro: Parâmetros inválidos"
+
+msgctxt "#32022"
+msgid "Error: Invalid episode/season number"
+msgstr "Erro: Número de episódio/temporada inválido"
+
+msgctxt "#32027"
+msgid "Enter movie name"
+msgstr "Digite o nome do filme"
+
+msgctxt "#32028"
+msgid "Enter TV show name"
+msgstr "Digite o nome da série"
+
+msgctxt "#32029"
+msgid "IPTV Channel"
+msgstr "Canal IPTV"
+
+msgctxt "#32023"
+msgid "Updating..."
+msgstr "Atualizando..."
+
+msgctxt "#32024"
+msgid "Updated successfully!"
+msgstr "Atualizado com sucesso!"
+
+msgctxt "#32025"
+msgid "Auto-update error"
+msgstr "Erro na atualização automática"
+
+msgctxt "#32026"
+msgid "Update error"
+msgstr "Erro na atualização"
+
+# Loading Dialog strings (32030-32031)
+msgctxt "#32030"
+msgid "Searching at the source"
+msgstr "Procurando na fonte"
+
+msgctxt "#32031"
+msgid "Resolving the link"
+msgstr "Resolvendo o link"
+
+# Up Next Category (32100-32109)
+msgctxt "#32100"
+msgid "Up Next"
+msgstr ""
+
+msgctxt "#32101"
+msgid "Enable Up Next"
+msgstr "Ativar Up Next"
+
+msgctxt "#32102"
+msgid "Show notification when remaining (seconds)"
+msgstr "Mostrar notificação quando faltar (segundos)"
+
+msgctxt "#32103"
+msgid "Countdown timer duration (seconds)"
+msgstr "Duração da contagem regressiva (segundos)"
+
+msgctxt "#32107"
+msgid "Next Episode"
+msgstr "Próximo Episódio"
+
+msgctxt "#32108"
+msgid "Play ({0}s)"
+msgstr "Reproduzir ({0}s)"
+
+msgctxt "#32109"
+msgid "Cancel"
+msgstr "Cancelar"

@@ -1,0 +1,170 @@
+# King IPTV - English strings
+# Kodi Media Center language file
+
+msgid ""
+msgstr ""
+"Project-Id-Version: King IPTV\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-02-07 00:00+0000\n"
+"PO-Revision-Date: 2025-02-07 00:00+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+# General / Menu strings (32000-32099)
+msgctxt "#32000"
+msgid "IPTV Lists"
+msgstr ""
+
+msgctxt "#32001"
+msgid "Pluto Channels"
+msgstr ""
+
+msgctxt "#32002"
+msgid "Radios"
+msgstr ""
+
+msgctxt "#32003"
+msgid "IMDB Movies"
+msgstr ""
+
+msgctxt "#32004"
+msgid "IMDB TV shows"
+msgstr ""
+
+msgctxt "#32005"
+msgid "Settings"
+msgstr ""
+
+msgctxt "#32006"
+msgid "Search Movie"
+msgstr ""
+
+msgctxt "#32007"
+msgid "Top 250 Movies"
+msgstr ""
+
+msgctxt "#32008"
+msgid "Popular Movies"
+msgstr ""
+
+msgctxt "#32009"
+msgid "Search TV show"
+msgstr ""
+
+msgctxt "#32010"
+msgid "Top 250 TV shows"
+msgstr ""
+
+msgctxt "#32011"
+msgid "Popular TV shows"
+msgstr ""
+
+msgctxt "#32012"
+msgid "Next Page"
+msgstr ""
+
+msgctxt "#32013"
+msgid "No IPTV list"
+msgstr ""
+
+msgctxt "#32014"
+msgid "List Offline"
+msgstr ""
+
+msgctxt "#32015"
+msgid "Option unavailable"
+msgstr ""
+
+msgctxt "#32016"
+msgid "Stream Unavailable"
+msgstr ""
+
+msgctxt "#32017"
+msgid "No radios"
+msgstr ""
+
+msgctxt "#32018"
+msgid "No channels"
+msgstr ""
+
+msgctxt "#32020"
+msgid "Choose Portuguese audio in settings"
+msgstr ""
+
+msgctxt "#32021"
+msgid "Error: Invalid parameters"
+msgstr ""
+
+msgctxt "#32022"
+msgid "Error: Invalid episode/season number"
+msgstr ""
+
+msgctxt "#32027"
+msgid "Enter movie name"
+msgstr ""
+
+msgctxt "#32028"
+msgid "Enter TV show name"
+msgstr ""
+
+msgctxt "#32029"
+msgid "IPTV Channel"
+msgstr ""
+
+msgctxt "#32023"
+msgid "Updating..."
+msgstr ""
+
+msgctxt "#32024"
+msgid "Updated successfully!"
+msgstr ""
+
+msgctxt "#32025"
+msgid "Auto-update error"
+msgstr ""
+
+msgctxt "#32026"
+msgid "Update error"
+msgstr ""
+
+# Loading Dialog strings (32030-32031)
+msgctxt "#32030"
+msgid "Searching at the source"
+msgstr ""
+
+msgctxt "#32031"
+msgid "Resolving the link"
+msgstr ""
+
+# Up Next Category (32100-32109)
+msgctxt "#32100"
+msgid "Up Next"
+msgstr ""
+
+msgctxt "#32101"
+msgid "Enable Up Next"
+msgstr ""
+
+msgctxt "#32102"
+msgid "Show notification when remaining (seconds)"
+msgstr ""
+
+msgctxt "#32103"
+msgid "Countdown timer duration (seconds)"
+msgstr ""
+
+msgctxt "#32107"
+msgid "Next Episode"
+msgstr ""
+
+msgctxt "#32108"
+msgid "Play ({0}s)"
+msgstr ""
+
+msgctxt "#32109"
+msgid "Cancel"
+msgstr ""

@@ -1,0 +1,54 @@
+# .github/workflows/unzip.yml
+name: Extrair ZIP
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  unzip-and-commit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Instalar unzip
+        run: sudo apt-get update && sudo apt-get install -y unzip
+
+      - name: Verificar se o ZIP existe
+        run: |
+          if [ ! -f plugin.video.kingiptv.zip ]; then
+            echo "❌ Arquivo plugin.video.kingiptv.zip não encontrado."
+            exit 1
+          fi
+
+      - name: Extrair ZIP na raiz
+        run: |
+          unzip -o plugin.video.kingiptv.zip
+          chmod -R u+rwX,go+rX .
+
+      - name: Configurar Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Verificar alterações
+        id: changes
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit e Push (se houver mudanças)
+        if: steps.changes.outputs.has_changes == 'true'
+        run: |
+          git add .
+          git commit -m "Atualização automática do plugin a partir do ZIP"
+          git push

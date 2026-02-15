@@ -2,7 +2,6 @@
 import os
 import time
 import json
-import threading
 from lib.helper import *
 import inputstreamhelper
 from lib import xtream, tunein, pluto, imdb, api_vod, hlsretry
@@ -108,6 +107,7 @@ def build_series_playlist(imdb_number, season_num, current_episode_num, serie_na
                 if kodi_version >= 20:
                     info_tag = list_item.getVideoInfoTag()
                     info_tag.setTitle(display_title)
+                    info_tag.setTvShowTitle(serie_name)
                     info_tag.setOriginalTitle(original_name)
                     info_tag.setPlot(description)
                     info_tag.setIMDBNumber(imdb_number)
@@ -117,6 +117,7 @@ def build_series_playlist(imdb_number, season_num, current_episode_num, serie_na
                 else:
                     list_item.setInfo('video', {
                         'title': display_title,
+                        'tvshowtitle': serie_name,
                         'originaltitle': original_name,
                         'plot': description,
                         'imdbnumber': imdb_number,
@@ -681,6 +682,8 @@ def play_resolve_series(param):
         notify(getString(32020))
         xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, play_item)
         
+        xbmc.sleep(500)
+        
         playlist = xbmc.PlayList(xbmc.PLAYLIST_VIDEO)
         current_position = playlist.getposition()
         
@@ -697,10 +700,6 @@ def play_resolve_series(param):
                 )
         
         player = get_player()
-        threading.Thread(
-            target=player.start_monitoring,
-            args=(imdb_number, season_num, current_episode_num),
-            daemon=True
-        ).start()
+        player.start_monitoring(imdb_number, season_num, current_episode_num)
     else:
         notify(getString(32016))

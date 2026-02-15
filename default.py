@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import os
 import time
 import json
@@ -34,11 +33,15 @@ try:
     REMOTE_DATE_URL = 'https://raw.githubusercontent.com/icarok99/plugin.video.kingiptv/main/last_update.txt'
 
     def get_local_date():
-        try:
+        if os.path.exists(UPDATE_CHECK_FILE):
             with open(UPDATE_CHECK_FILE, 'r') as f:
-                return datetime.strptime(f.read().strip(), '%d-%m-%Y')
-        except:
-            return datetime.strptime('14-02-2026', '%d-%m-%Y')
+                content = f.read().strip()
+                if content:
+                    try:
+                        return datetime.strptime(content, '%d-%m-%Y')
+                    except ValueError:
+                        pass
+        return datetime.strptime('14-02-2026', '%d-%m-%Y')
 
     def save_local_date(date_str):
         with open(UPDATE_CHECK_FILE, 'w') as f:
@@ -68,67 +71,76 @@ API_RADIOS = '\x68\x74\x74\x70\x73\x3a\x2f\x2f\x64\x6f\x63\x73\x2e\x67\x6f\x6f\x
 
 if not exists(profile):
     try:
-        os.mkdir(profile)
-    except:
-        pass
+        os.makedirs(profile)
+    except OSError as e:
+        if e.errno != 17:
+            pass
 IPTV_PROBLEM_LOG = translate(os.path.join(profile, 'iptv_problems_log.txt'))
 
 
 def build_series_playlist(imdb_number, season_num, current_episode_num, serie_name, original_name, all_episodes):
-    try:
-        playlist = xbmc.PlayList(xbmc.PLAYLIST_VIDEO)
-        
-        for episode_data in all_episodes:
-            ep_num = episode_data.get('episode')
-            name = episode_data.get('episode_title', '')
-            img = episode_data.get('thumbnail', '')
-            fanart = episode_data.get('fanart', '')
-            description = episode_data.get('description', '')
+    if not all_episodes or not isinstance(all_episodes, list):
+        return
+    
+    if not isinstance(season_num, int) or not isinstance(current_episode_num, int):
+        return
+    
+    playlist = xbmc.PlayList(xbmc.PLAYLIST_VIDEO)
+    
+    for episode_data in all_episodes:
+        if not isinstance(episode_data, dict):
+            continue
             
-            if ep_num > current_episode_num:
-                params = {
-                    'serie_name': serie_name,
-                    'original_name': original_name,
-                    'season_num': str(season_num),
-                    'episode_num': str(ep_num),
-                    'episode_title': name,
-                    'iconimage': img,
-                    'fanart': fanart,
+        ep_num = episode_data.get('episode')
+        if not ep_num or not isinstance(ep_num, int):
+            continue
+            
+        name = episode_data.get('episode_title', '')
+        img = episode_data.get('thumbnail', '')
+        fanart = episode_data.get('fanart', '')
+        description = episode_data.get('description', '')
+        
+        if ep_num > current_episode_num:
+            params = {
+                'serie_name': serie_name,
+                'original_name': original_name,
+                'season_num': str(season_num),
+                'episode_num': str(ep_num),
+                'episode_title': name,
+                'iconimage': img,
+                'fanart': fanart,
+                'imdbnumber': imdb_number,
+                'description': description
+            }
+            
+            plugin_url = 'plugin://plugin.video.kingiptv/play_resolve_series/{}'.format(urlencode(params))
+            
+            display_title = name if name else 'S{}E{}'.format(season_num, str(ep_num).zfill(2))
+            list_item = xbmcgui.ListItem(display_title)
+            list_item.setArt({'thumb': img, 'icon': img, 'fanart': fanart or img})
+            
+            kodi_version = int(xbmc.getInfoLabel('System.BuildVersion').split('.')[0])
+            if kodi_version >= 20:
+                info_tag = list_item.getVideoInfoTag()
+                info_tag.setTitle(display_title)
+                info_tag.setOriginalTitle(original_name)
+                info_tag.setPlot(description)
+                info_tag.setIMDBNumber(imdb_number)
+                info_tag.setMediaType('episode')
+                info_tag.setSeason(season_num)
+                info_tag.setEpisode(ep_num)
+            else:
+                list_item.setInfo('video', {
+                    'title': display_title,
+                    'originaltitle': original_name,
+                    'plot': description,
                     'imdbnumber': imdb_number,
-                    'description': description
-                }
-                
-                plugin_url = 'plugin://plugin.video.kingiptv/play_resolve_series/{}'.format(urlencode(params))
-                
-                display_title = name if name else f'S{season_num}E{str(ep_num).zfill(2)}'
-                list_item = xbmcgui.ListItem(display_title)
-                list_item.setArt({'thumb': img, 'icon': img, 'fanart': fanart or img})
-                
-                kodi_version = int(xbmc.getInfoLabel('System.BuildVersion').split('.')[0])
-                if kodi_version >= 20:
-                    info_tag = list_item.getVideoInfoTag()
-                    info_tag.setTitle(display_title)
-                    info_tag.setOriginalTitle(original_name)
-                    info_tag.setPlot(description)
-                    info_tag.setIMDBNumber(imdb_number)
-                    info_tag.setMediaType('episode')
-                    info_tag.setSeason(season_num)
-                    info_tag.setEpisode(ep_num)
-                else:
-                    list_item.setInfo('video', {
-                        'title': display_title,
-                        'originaltitle': original_name,
-                        'plot': description,
-                        'imdbnumber': imdb_number,
-                        'mediatype': 'episode',
-                        'season': season_num,
-                        'episode': ep_num
-                    })
-                
-                playlist.add(url=plugin_url, listitem=list_item)
-                
-    except:
-        pass
+                    'mediatype': 'episode',
+                    'season': season_num,
+                    'episode': ep_num
+                })
+            
+            playlist.add(url=plugin_url, listitem=list_item)
 
 
 @route('/')
@@ -225,9 +237,8 @@ def play_iptv(param):
     iconimage = param.get('iconimage', '')
     url = param.get('url', '')
     if '|' in url: url = url.split('|')[0]
-    try: hlsretry.XtreamProxy().start()
-    except: pass
-    proxy_url = f'http://127.0.0.1:{hlsretry.PORT_NUMBER}/?url={quote_plus(url)}'
+    hlsretry.XtreamProxy().start()
+    proxy_url = 'http://127.0.0.1:{}/?url={}'.format(hlsretry.PORT_NUMBER, quote_plus(url))
     play_item = xbmcgui.ListItem(path=proxy_url)
     play_item.setContentLookup(False)
     play_item.setArt({"icon": iconimage or "DefaultVideo.png", "thumb": iconimage or "DefaultVideo.png"})
@@ -620,14 +631,18 @@ def play_resolve_series(param):
         notify(getString(32021))
         return
     
-    try:
-        current_episode_num = int(episode)
-        season_num = int(season)
-    except (ValueError, TypeError):
+    if not str(episode).isdigit() or not str(season).isdigit():
+        notify(getString(32022))
+        return
+    
+    current_episode_num = int(episode)
+    season_num = int(season)
+    
+    if current_episode_num <= 0 or season_num <= 0:
         notify(getString(32022))
         return
 
-    result = api_vod.VOD().tvshows(imdb_number, season, episode)
+    result = api_vod.VOD().tvshows(imdb_number, season_num, current_episode_num)
     if result:
         stream = result
 
@@ -636,7 +651,7 @@ def play_resolve_series(param):
 
         is_direct_file = url.lower().endswith(('.mp4', '.mkv', '.avi', '.mov', '.webm', '.ts'))
 
-        display_title = episode_title if episode_title else f'S{season}E{episode.zfill(2)}'
+        display_title = episode_title if episode_title else 'S{}E{}'.format(season_num, str(current_episode_num).zfill(2))
 
         play_item = xbmcgui.ListItem(path=url)
         play_item.setArt({'thumb': iconimage, 'icon': iconimage, 'fanart': fanart or iconimage})

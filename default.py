@@ -243,7 +243,7 @@ def play_iptv(param):
         info_tag.setMediaType('video')
     else:
         play_item.setInfo('video', {'title': name, 'plot': description})
-    xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, play_item)
+    xbmc.Player().play(proxy_url, play_item)
 
 @route('/channels_pluto')
 def channels_pluto():

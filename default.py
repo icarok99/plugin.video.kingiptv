@@ -217,7 +217,7 @@ def open_channels(param):
         setcontent('videos')
         for i in open_:
             name,link,thumb,desc = i
-            addMenuItem({'name': name, 'description': desc, 'iconimage': thumb, 'url': link}, destiny='/play_iptv')
+            addMenuItem({'name': name, 'description': desc, 'iconimage': thumb, 'url': link}, destiny='/play_iptv', folder=False)
         end()
         setview('WideList')
     else:
@@ -230,8 +230,9 @@ def play_iptv(param):
     iconimage = param.get('iconimage', '')
     url = param.get('url', '')
     if '|' in url: url = url.split('|')[0]
-    hlsretry.XtreamProxy().start()
-    proxy_url = 'http://127.0.0.1:{}/?url={}'.format(hlsretry.PORT_NUMBER, quote_plus(url))
+    try: hlsretry.XtreamProxy().start()
+    except: pass
+    proxy_url = f'http://127.0.0.1:{hlsretry.PORT_NUMBER}/?url={quote_plus(url)}'
     play_item = xbmcgui.ListItem(path=proxy_url)
     play_item.setContentLookup(False)
     play_item.setArt({"icon": iconimage or "DefaultVideo.png", "thumb": iconimage or "DefaultVideo.png"})

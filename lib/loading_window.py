@@ -5,6 +5,48 @@ import threading
 import time
 import os
 
+
+class _PlaybackMonitor(xbmc.Player):
+
+    def __init__(self):
+        super().__init__()
+        self._event = threading.Event()
+
+    def onPlayBackStarted(self):
+        self._event.set()
+
+    def onAVStarted(self):
+        self._event.set()
+
+    def onPlayBackError(self):
+        self._event.set()
+
+    def onPlayBackStopped(self):
+        self._event.set()
+
+    def reset(self):
+        self._event.clear()
+
+    def wait_for_playback(self, timeout=20):
+        monitor = xbmc.Monitor()
+        elapsed = 0
+        interval = 0.2
+
+        while elapsed < timeout:
+            if self._event.is_set():
+                return True
+            try:
+                if self.isPlaying() and self.getTime() > 0:
+                    return True
+            except:
+                pass
+            if monitor.waitForAbort(interval):
+                return False
+            elapsed += interval
+
+        return False
+
+
 class LoadingWindow(xbmcgui.WindowXMLDialog):
     
     PROGRESS_CONTROL = 100
@@ -82,6 +124,7 @@ class LoadingManager:
         self._should_close = False
         self._busy_suppress_thread = None
         self._suppress_busy = False
+        self._player_monitor = _PlaybackMonitor()
     
     def _run_busy_suppressor(self):
         while self._suppress_busy:
@@ -138,60 +181,23 @@ class LoadingManager:
     def close(self):
         if self.window:
             self._should_close = True
-            
             if self._monitor_thread is None or not self._monitor_thread.is_alive():
+                self._player_monitor.reset()
                 self._monitor_thread = threading.Thread(target=self._wait_for_playback)
                 self._monitor_thread.daemon = True
                 self._monitor_thread.start()
-    
+
     def _wait_for_playback(self):
-        try:
-            player = xbmc.Player()
-            monitor = xbmc.Monitor()
-            
-            max_wait = 15
-            elapsed = 0
-            check_interval = 0.2
-            
-            while elapsed < max_wait and self._should_close:
-                if player.isPlaying():
-                    try:
-                        time_check = player.getTime()
-                        if time_check > 0:
-                            break
-                    except:
-                        pass
-                    
-                    xbmc.sleep(300)
-                    
-                    try:
-                        if player.isPlaying():
-                            break
-                    except:
-                        pass
-                
-                if monitor.waitForAbort(check_interval):
-                    break
-                
-                elapsed += check_interval
-            
-            if elapsed >= max_wait:
-                pass
-            else:
-                xbmc.sleep(1000)
-            
-            with self._lock:
-                if self.window and self._should_close:
-                    try:
-                        self._suppress_busy = False
-                        self.window.close_dialog()
-                        self.window = None
-                    except Exception as e:
-                        pass
-                        
-        except Exception as e:
-            pass
-    
+        self._player_monitor.wait_for_playback(timeout=20)
+        with self._lock:
+            if self.window and self._should_close:
+                try:
+                    self._suppress_busy = False
+                    self.window.close_dialog()
+                    self.window = None
+                except Exception as e:
+                    pass
+
     def force_close(self):
         with self._lock:
             self._suppress_busy = False

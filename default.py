@@ -126,12 +126,16 @@ def build_series_playlist(imdb_number, season_num, current_episode_num, serie_na
                 info_tag.setTvShowTitle(serie_name)
                 info_tag.setPlot(description)
                 info_tag.setMediaType('episode')
+                info_tag.setSeason(season_num)
+                info_tag.setEpisode(ep_num)
             else:
                 list_item.setInfo('video', {
                     'title': '{}x{} {}'.format(season_num, str(ep_num).zfill(2), name) if name else '{}x{}'.format(season_num, str(ep_num).zfill(2)),
                     'tvshowtitle': serie_name,
                     'plot': description,
                     'mediatype': 'episode',
+                    'season': season_num,
+                    'episode': ep_num,
                 })
             
             playlist.add(url=plugin_url, listitem=list_item)
@@ -537,6 +541,10 @@ def open_imdb_episodes(param):
                 'serie_name': serie_name,
                 'original_name': original_name,
                 'episode_title': name,
+                'season': int(season),
+                'episode': int(episode_number),
+                'tvshowtitle': serie_name,
+                'mediatype': 'episode',
                 'playable': True
             }, destiny='/play_resolve_series', folder=False)
         
@@ -682,6 +690,8 @@ def play_resolve_series(param):
                 info_tag.setPlot(description)
                 info_tag.setIMDBNumber(imdb_number)
                 info_tag.setMediaType('episode')
+                info_tag.setSeason(season_num)
+                info_tag.setEpisode(current_episode_num)
             else:
                 info_dict = {
                     'title': playback_title,
@@ -689,7 +699,9 @@ def play_resolve_series(param):
                     'originaltitle': original_name,
                     'plot': description,
                     'imdbnumber': imdb_number,
-                    'mediatype': 'episode'
+                    'mediatype': 'episode',
+                    'season': season_num,
+                    'episode': current_episode_num,
                 }
                 play_item.setInfo('video', info_dict)
 

@@ -295,8 +295,6 @@ def radios():
             addMenuItem({'name': name, 'description': '', 'url': url}, destiny='/play_radio')
         end()
         setview('List')
-    else:
-        notify(getString(32017))
 
 @route('/play_radio')
 def play_radio(param):

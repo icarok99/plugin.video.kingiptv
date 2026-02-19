@@ -83,7 +83,7 @@ class UpNextDialog(xbmcgui.WindowXMLDialog):
             self.auto_play = True
             try:
                 total_time = self.player.getTotalTime()
-                self.player.seekTime(total_time - 3)
+                self.player.seekTime(total_time - 1)
             except Exception:
                 pass
             self.close()
@@ -92,7 +92,7 @@ class UpNextDialog(xbmcgui.WindowXMLDialog):
         if controlId == self.BUTTON_PLAY_NOW:
             try:
                 total_time = self.player.getTotalTime()
-                self.player.seekTime(total_time - 3)
+                self.player.seekTime(total_time - 1)
             except:
                 pass
             self.auto_play = True
@@ -114,7 +114,7 @@ class UpNextDialog(xbmcgui.WindowXMLDialog):
                 if focused_control == self.BUTTON_PLAY_NOW:
                     try:
                         total_time = self.player.getTotalTime()
-                        self.player.seekTime(total_time - 3)
+                        self.player.seekTime(total_time - 1)
                     except:
                         pass
                     self.auto_play = True
@@ -143,7 +143,7 @@ class UpNextDialog(xbmcgui.WindowXMLDialog):
         elif action_id == xbmcgui.ACTION_PLAYER_PLAY:
             try:
                 total_time = self.player.getTotalTime()
-                self.player.seekTime(total_time - 3)
+                self.player.seekTime(total_time - 1)
             except:
                 pass
             self.auto_play = True
@@ -370,7 +370,7 @@ class UpNextService:
                         else:
                             break
                 
-                if monitor.waitForAbort(2):
+                if monitor.waitForAbort(0.5):
                     break
                     
             except Exception:
@@ -397,12 +397,6 @@ class UpNextService:
             auto_play = dialog.auto_play
             cancelled = dialog.cancelled
             del dialog
-
-            if auto_play:
-                playlist = xbmc.PlayList(xbmc.PLAYLIST_VIDEO)
-                current_pos = playlist.getposition()
-                if current_pos < playlist.size() - 1:
-                    xbmc.Player().play(playlist, startpos=current_pos + 1)
 
             elif cancelled:
                 pass

@@ -81,18 +81,13 @@ class UpNextDialog(xbmcgui.WindowXMLDialog):
         
         if not self._stop_countdown and remaining == 0:
             self.auto_play = True
-            try:
-                total_time = self.player.getTotalTime()
-                self.player.seekTime(total_time - 1)
-            except Exception:
-                pass
             self.close()
     
     def onClick(self, controlId):
         if controlId == self.BUTTON_PLAY_NOW:
             try:
                 total_time = self.player.getTotalTime()
-                self.player.seekTime(total_time - 1)
+                self.player.seekTime(total_time - 3)
             except:
                 pass
             self.auto_play = True
@@ -114,7 +109,7 @@ class UpNextDialog(xbmcgui.WindowXMLDialog):
                 if focused_control == self.BUTTON_PLAY_NOW:
                     try:
                         total_time = self.player.getTotalTime()
-                        self.player.seekTime(total_time - 1)
+                        self.player.seekTime(total_time - 3)
                     except:
                         pass
                     self.auto_play = True
@@ -143,7 +138,7 @@ class UpNextDialog(xbmcgui.WindowXMLDialog):
         elif action_id == xbmcgui.ACTION_PLAYER_PLAY:
             try:
                 total_time = self.player.getTotalTime()
-                self.player.seekTime(total_time - 1)
+                self.player.seekTime(total_time - 3)
             except:
                 pass
             self.auto_play = True
@@ -200,8 +195,9 @@ class UpNextService:
             self._dialog_shown = False
         
         with self._monitor_lock:
-            self._stop_monitoring = True
-            self.monitoring = False
+            if self.monitoring:
+                self._stop_monitoring = True
+                self.monitoring = False
         
         if self.monitor_thread and self.monitor_thread.is_alive():
             self.monitor_thread.join(timeout=3.0)
@@ -337,7 +333,7 @@ class UpNextService:
         start_at_trigger = total_time - self.trigger_seconds - safety_margin
         start_monitoring_at = min(start_at_90_percent, start_at_trigger)
         
-        light_check_interval = 1
+        light_check_interval = min(60, max(10, int(self.trigger_seconds / 2)))
         
         while self.player.isPlayingVideo() and not self._stop_monitoring:
             try:
@@ -370,7 +366,7 @@ class UpNextService:
                         else:
                             break
                 
-                if monitor.waitForAbort(0.5):
+                if monitor.waitForAbort(2):
                     break
                     
             except Exception:
@@ -393,21 +389,8 @@ class UpNextService:
                 countdown_seconds=self.countdown_seconds
             )
             dialog.doModal()
-
-            auto_play = dialog.auto_play
-            cancelled = dialog.cancelled
+            
             del dialog
-
-            if auto_play:
-                try:
-                    total_time = self.player.getTotalTime()
-                    if total_time > 0:
-                        self.player.seekTime(total_time - 1)
-                except Exception:
-                    pass
-
-            elif cancelled:
-                pass
                 
         except Exception:
             pass

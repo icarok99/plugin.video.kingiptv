@@ -398,6 +398,14 @@ class UpNextService:
             cancelled = dialog.cancelled
             del dialog
 
+            if auto_play:
+                try:
+                    total_time = self.player.getTotalTime()
+                    if total_time > 0:
+                        self.player.seekTime(total_time - 1)
+                except Exception:
+                    pass
+
             elif cancelled:
                 pass
                 

@@ -259,6 +259,8 @@ def addMenuItem(params={}, destiny='', folder=True):
     episode = params.get("episode", "")
     year = params.get("year", "")
     mediatype = params.get("mediatype", "video")
+    tvshowtitle = params.get("tvshowtitle", "")
+    serie_name = params.get("serie_name", "")
     li=xbmcgui.ListItem(name)
     iconimage = iconimage if iconimage else addonIcon
     li.setArt({"icon": "DefaultVideo.png", "thumb": iconimage})
@@ -305,21 +307,16 @@ def addMenuItem(params={}, destiny='', folder=True):
             info.setGenres([str(genre)])
         else:
             li.setInfo('video', {'genre': str(genre)})
-    if season:
-        if infotag:
-            info.setSeason(int(season))
-        else:
-            li.setInfo('video', {'season': int(season)})
-    if episode:
-        if infotag:
-            info.setEpisode(int(episode))
-        else:
-            li.setInfo('video', {'episode': int(episode)})
     if mediatype:
         if infotag:
             info.setMediaType(str(mediatype))
         else:
-            li.setInfo('video', {'mediatype': str(mediatype)})       
+            li.setInfo('video', {'mediatype': str(mediatype)})
+    if tvshowtitle or serie_name:
+        if infotag:
+            info.setTvShowTitle(str(tvshowtitle or serie_name))
+        else:
+            li.setInfo('video', {'tvshowtitle': str(tvshowtitle or serie_name)})
     if playable and folder == False and not playable == 'false':
         li.setProperty('IsPlayable', 'true')        
     if fanart:

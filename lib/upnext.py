@@ -254,14 +254,15 @@ class UpNextService:
             if hasattr(next_item, 'getVideoInfoTag'):
                 info_tag = next_item.getVideoInfoTag()
                 
-                title = info_tag.getTitle() if hasattr(info_tag, 'getTitle') else ''
-                season, episode, episode_title = self._parse_episode_format(title)
+                season = info_tag.getSeason() if hasattr(info_tag, 'getSeason') else 0
+                episode = info_tag.getEpisode() if hasattr(info_tag, 'getEpisode') else 0
+                episode_title = info_tag.getTitle() if hasattr(info_tag, 'getTitle') else ''
                 
                 return {
                     'serie_name': info_tag.getTVShowTitle() if hasattr(info_tag, 'getTVShowTitle') else '',
                     'original_name': info_tag.getOriginalTitle() if hasattr(info_tag, 'getOriginalTitle') else '',
-                    'next_season': season if season else 0,
-                    'next_episode': episode if episode else 0,
+                    'next_season': season,
+                    'next_episode': episode,
                     'episode_title': episode_title,
                     'thumbnail': next_item.getArt('thumb'),
                     'fanart': next_item.getArt('fanart'),

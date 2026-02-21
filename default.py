@@ -540,8 +540,6 @@ def open_imdb_episodes(param):
                 'serie_name': serie_name,
                 'original_name': original_name,
                 'episode_title': name,
-                'season': int(season),
-                'episode': int(episode_number),
                 'mediatype': 'episode',
                 'playable': True
             }, destiny='/play_resolve_series', folder=False)

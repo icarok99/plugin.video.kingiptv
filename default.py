@@ -116,13 +116,14 @@ def build_series_playlist(imdb_number, season_num, current_episode_num, serie_na
             
             plugin_url = 'plugin://plugin.video.kingiptv/play_resolve_series/{}'.format(urlencode(params))
             
-            list_item = xbmcgui.ListItem('{}x{} {}'.format(season_num, str(ep_num).zfill(2), name) if name else '{}x{}'.format(season_num, str(ep_num).zfill(2)))
+            display_label = name if name else '{}x{}'.format(season_num, str(ep_num).zfill(2))
+            list_item = xbmcgui.ListItem(display_label)
             list_item.setArt({'thumb': img, 'icon': img, 'fanart': fanart or img})
             
             kodi_version = int(xbmc.getInfoLabel('System.BuildVersion').split('.')[0])
             if kodi_version >= 20:
                 info_tag = list_item.getVideoInfoTag()
-                info_tag.setTitle('{}x{} {}'.format(season_num, str(ep_num).zfill(2), name) if name else '{}x{}'.format(season_num, str(ep_num).zfill(2)))
+                info_tag.setTitle(name)
                 info_tag.setTvShowTitle(serie_name)
                 info_tag.setPlot(description)
                 info_tag.setMediaType('episode')
@@ -130,7 +131,7 @@ def build_series_playlist(imdb_number, season_num, current_episode_num, serie_na
                 info_tag.setEpisode(ep_num)
             else:
                 list_item.setInfo('video', {
-                    'title': '{}x{} {}'.format(season_num, str(ep_num).zfill(2), name) if name else '{}x{}'.format(season_num, str(ep_num).zfill(2)),
+                    'title': name,
                     'tvshowtitle': serie_name,
                     'plot': description,
                     'mediatype': 'episode',
@@ -526,7 +527,7 @@ def open_imdb_episodes(param):
         
         setcontent('episodes')
         for episode_number, name, img, fanart, description in itens:
-            name_full = '{}x{} {}'.format(season, episode_number, name)
+            name_full = '{}x{} {}'.format(season, str(episode_number).zfill(2), name)
             
             addMenuItem({
                 'name': name_full,
@@ -541,7 +542,6 @@ def open_imdb_episodes(param):
                 'episode_title': name,
                 'season': int(season),
                 'episode': int(episode_number),
-                'tvshowtitle': serie_name,
                 'mediatype': 'episode',
                 'playable': True
             }, destiny='/play_resolve_series', folder=False)
@@ -660,10 +660,9 @@ def play_resolve_series(param):
 
             is_direct_file = url.lower().endswith(('.mp4', '.mkv', '.avi', '.mov', '.webm', '.ts'))
 
-            display_title = '{}x{} {}'.format(season_num, str(current_episode_num).zfill(2), episode_title) if episode_title else '{}x{}'.format(season_num, str(current_episode_num).zfill(2))
-            playback_title = episode_title if episode_title else 'S{}E{}'.format(season_num, str(current_episode_num).zfill(2))
+            playback_title = episode_title
 
-            play_item = xbmcgui.ListItem(path=url)
+            play_item = xbmcgui.ListItem(label=playback_title, path=url)
             play_item.setArt({'thumb': iconimage, 'icon': iconimage, 'fanart': fanart or iconimage})
             play_item.setContentLookup(False)
 

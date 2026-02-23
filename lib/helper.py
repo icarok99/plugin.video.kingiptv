@@ -317,6 +317,24 @@ def addMenuItem(params={}, destiny='', folder=True):
             info.setTvShowTitle(str(tvshowtitle or serie_name))
         else:
             li.setInfo('video', {'tvshowtitle': str(tvshowtitle or serie_name)})
+    playcount = params.get('playcount', None)
+    if playcount is not None:
+        if infotag:
+            info.setPlaycount(int(playcount))
+        else:
+            li.setInfo('video', {'playcount': int(playcount)})
+    season_num = params.get('season_num', season)
+    episode_num = params.get('episode_num', episode)
+    if season_num:
+        if infotag:
+            info.setSeason(int(season_num))
+        else:
+            li.setInfo('video', {'season': int(season_num)})
+    if episode_num:
+        if infotag:
+            info.setEpisode(int(episode_num))
+        else:
+            li.setInfo('video', {'episode': int(episode_num)})
     if playable and folder == False and not playable == 'false':
         li.setProperty('IsPlayable', 'true')        
     if fanart:

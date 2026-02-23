@@ -402,9 +402,6 @@ class UpNextService:
         if was_monitoring and self.monitor_thread and self.monitor_thread.is_alive():
             self.monitor_thread.join(timeout=3.0)
 
-        with self._dialog_lock:
-            self._dialog_shown = False
-
     def is_monitoring(self):
         with self._monitor_lock:
             return self.monitoring

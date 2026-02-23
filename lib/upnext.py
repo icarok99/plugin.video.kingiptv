@@ -28,14 +28,8 @@ class UpNextDialog(xbmcgui.WindowXMLDialog):
         self.countdown_thread = None
         self._stop_countdown = False
         self.player = xbmc.Player()
-        self.on_mark_watched = kwargs.get('on_mark_watched', None)
 
     def _do_advance(self):
-        if self.on_mark_watched:
-            try:
-                self.on_mark_watched()
-            except Exception:
-                pass
         try:
             total_time = self.player.getTotalTime()
             self.player.seekTime(total_time - 1)
@@ -353,6 +347,7 @@ class UpNextService:
                     with self._dialog_lock:
                         if not self._dialog_shown:
                             self._dialog_shown = True
+                            self._mark_current_as_watched()
                             self._show_upnext_dialog(next_info)
                             break
                         else:
@@ -367,21 +362,22 @@ class UpNextService:
         with self._monitor_lock:
             self.monitoring = False
 
+    def _mark_current_as_watched(self):
+        imdb_id = getattr(self.player, 'imdb_id', None)
+        season  = getattr(self.player, 'season', None)
+        episode = getattr(self.player, 'episode', None)
+
+        if imdb_id and season is not None and episode is not None:
+            threading.Thread(
+                target=self.db.mark_watched,
+                args=(imdb_id, season, episode),
+                daemon=True
+            ).start()
+
     def _show_upnext_dialog(self, next_info):
         try:
             import xbmcaddon
             addon = xbmcaddon.Addon()
-
-            imdb_id = getattr(self.player, 'imdb_id', None)
-            season  = getattr(self.player, 'season', None)
-            episode = getattr(self.player, 'episode', None)
-
-            def _mark():
-                if imdb_id and season is not None and episode is not None:
-                    try:
-                        self.db.mark_watched(imdb_id, season, episode)
-                    except Exception:
-                        pass
 
             dialog = UpNextDialog(
                 'upnext-dialog.xml',
@@ -390,7 +386,6 @@ class UpNextService:
                 '1080i',
                 next_episode_info=next_info,
                 countdown_seconds=self.countdown_seconds,
-                on_mark_watched=_mark
             )
             dialog.doModal()
             del dialog

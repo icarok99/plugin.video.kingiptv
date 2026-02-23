@@ -11,7 +11,6 @@ _addon = _xbmcaddon.Addon()
 def getString(string_id):
     return _addon.getLocalizedString(string_id)
 
-
 class UpNextDialog(xbmcgui.WindowXMLDialog):
 
     BUTTON_PLAY_NOW = 3001
@@ -139,7 +138,6 @@ class UpNextDialog(xbmcgui.WindowXMLDialog):
             self.close()
             return
 
-
 class UpNextService:
 
     def __init__(self, player, database):
@@ -166,6 +164,8 @@ class UpNextService:
         self._dialog_shown = False
         self._dialog_lock = threading.Lock()
 
+        self._watched_marked = False
+
     def _parse_episode_format(self, text):
         import re
         if not text:
@@ -185,6 +185,7 @@ class UpNextService:
 
         with self._dialog_lock:
             self._dialog_shown = False
+        self._watched_marked = False
 
         with self._monitor_lock:
             self._stop_monitoring = True
@@ -192,30 +193,31 @@ class UpNextService:
 
         if self.monitor_thread and self.monitor_thread.is_alive():
             self.monitor_thread.join(timeout=3.0)
+        next_info = None
 
         playlist = xbmc.PlayList(xbmc.PLAYLIST_VIDEO)
+        has_next_in_playlist = (
+            playlist.size() > 0 and
+            playlist.getposition() < (playlist.size() - 1)
+        )
 
-        if playlist.size() == 0 or playlist.getposition() >= (playlist.size() - 1):
-            return
-
-        next_info = self._get_next_from_playlist()
+        if has_next_in_playlist:
+            next_info = self._get_next_from_playlist()
 
         if not next_info or not next_info.get('next_season'):
             next_episode_metadata = self.db.get_next_episode_metadata(imdb_id, season, episode)
-            if not next_episode_metadata:
-                return
-
-            next_info = {
-                'imdb_id': imdb_id,
-                'serie_name': next_episode_metadata.get('serie_name', ''),
-                'original_name': next_episode_metadata.get('original_name', ''),
-                'next_season': next_episode_metadata.get('season'),
-                'next_episode': next_episode_metadata.get('episode'),
-                'episode_title': next_episode_metadata.get('episode_title', ''),
-                'thumbnail': next_episode_metadata.get('thumbnail', ''),
-                'fanart': next_episode_metadata.get('fanart', ''),
-                'description': next_episode_metadata.get('description', '')
-            }
+            if next_episode_metadata:
+                next_info = {
+                    'imdb_id': imdb_id,
+                    'serie_name': next_episode_metadata.get('serie_name', ''),
+                    'original_name': next_episode_metadata.get('original_name', ''),
+                    'next_season': next_episode_metadata.get('season'),
+                    'next_episode': next_episode_metadata.get('episode'),
+                    'episode_title': next_episode_metadata.get('episode_title', ''),
+                    'thumbnail': next_episode_metadata.get('thumbnail', ''),
+                    'fanart': next_episode_metadata.get('fanart', ''),
+                    'description': next_episode_metadata.get('description', '')
+                }
 
         with self._monitor_lock:
             self.monitoring = True
@@ -223,7 +225,7 @@ class UpNextService:
 
         self.monitor_thread = threading.Thread(
             target=self._monitoring_loop,
-            args=(next_info,)
+            args=(imdb_id, season, episode, next_info,)
         )
         self.monitor_thread.daemon = True
         self.monitor_thread.start()
@@ -272,7 +274,7 @@ class UpNextService:
         except Exception:
             return None
 
-    def _monitoring_loop(self, next_info):
+    def _monitoring_loop(self, imdb_id, season, episode, next_info):
         monitor = xbmc.Monitor()
 
         waited = 0
@@ -320,6 +322,9 @@ class UpNextService:
                 self.monitoring = False
             return
 
+        watched_marked = False
+        watched_at = total_time * 0.9
+
         safety_margin = 30
         start_at_90_percent = total_time * 0.9
         start_at_trigger = total_time - self.trigger_seconds - safety_margin
@@ -339,18 +344,19 @@ class UpNextService:
             try:
                 current_time = self.player.getTime()
                 remaining_time = total_time - current_time
-
-                with self._dialog_lock:
-                    dialog_already_shown = self._dialog_shown
-
-                if remaining_time <= self.trigger_seconds and not dialog_already_shown:
+                if not watched_marked and current_time >= watched_at:
+                    watched_marked = True
+                    self._watched_marked = True
+                    threading.Thread(
+                        target=self.db.mark_watched,
+                        args=(imdb_id, season, episode),
+                        daemon=True
+                    ).start()
+                if next_info and remaining_time <= self.trigger_seconds:
                     with self._dialog_lock:
                         if not self._dialog_shown:
                             self._dialog_shown = True
-                            self._mark_current_as_watched()
                             self._show_upnext_dialog(next_info)
-                            break
-                        else:
                             break
 
                 if monitor.waitForAbort(0.5):
@@ -361,18 +367,6 @@ class UpNextService:
 
         with self._monitor_lock:
             self.monitoring = False
-
-    def _mark_current_as_watched(self):
-        imdb_id = getattr(self.player, 'imdb_id', None)
-        season  = getattr(self.player, 'season', None)
-        episode = getattr(self.player, 'episode', None)
-
-        if imdb_id and season is not None and episode is not None:
-            threading.Thread(
-                target=self.db.mark_watched,
-                args=(imdb_id, season, episode),
-                daemon=True
-            ).start()
 
     def _show_upnext_dialog(self, next_info):
         try:
@@ -406,10 +400,8 @@ class UpNextService:
         with self._monitor_lock:
             return self.monitoring
 
-
 _upnext_service = None
 _upnext_lock = threading.Lock()
-
 
 def get_upnext_service(player, database):
     global _upnext_service

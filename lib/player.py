@@ -7,7 +7,6 @@ from lib.database import KingDatabase
 
 db = KingDatabase()
 
-
 class KingPlayer(xbmc.Player):
 
     def __init__(self):
@@ -51,10 +50,9 @@ class KingPlayer(xbmc.Player):
             self.imdb_id = None
             self.season = None
             self.episode = None
-
         already_marked = (
             self.upnext_service and
-            self.upnext_service._dialog_shown
+            self.upnext_service._watched_marked
         )
 
         if imdb_id and season is not None and episode is not None and not already_marked:
@@ -84,10 +82,8 @@ class KingPlayer(xbmc.Player):
         if self.upnext_service:
             self.upnext_service.stop_monitoring()
 
-
 _global_player = None
 _player_lock = threading.Lock()
-
 
 def get_player():
     global _global_player

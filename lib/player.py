@@ -52,7 +52,12 @@ class KingPlayer(xbmc.Player):
             self.season = None
             self.episode = None
 
-        if imdb_id and season is not None and episode is not None:
+        already_marked = (
+            self.upnext_service and
+            self.upnext_service._dialog_shown
+        )
+
+        if imdb_id and season is not None and episode is not None and not already_marked:
             threading.Thread(
                 target=db.mark_watched,
                 args=(imdb_id, season, episode),

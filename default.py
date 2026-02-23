@@ -525,10 +525,12 @@ def open_imdb_episodes(param):
             episodes_data=itens
         )
         
+        watched_set = db.get_watched_in_season(imdb_id, int(season))
+
         setcontent('episodes')
         for episode_number, name, img, fanart, description in itens:
             name_full = '{}x{} {}'.format(season, str(episode_number).zfill(2), name)
-            
+
             addMenuItem({
                 'name': name_full,
                 'description': description,
@@ -541,9 +543,10 @@ def open_imdb_episodes(param):
                 'original_name': original_name,
                 'episode_title': name,
                 'mediatype': 'episode',
-                'playable': True
+                'playable': True,
+                'playcount': 1 if int(episode_number) in watched_set else 0
             }, destiny='/play_resolve_series', folder=False)
-        
+
         end()
         setview('List')
 

@@ -367,7 +367,7 @@ def find_series():
                 setcontent('tvshows')
                 for serie_name, image, url, description, imdb_id, original_name, year in results:
                     addMenuItem({
-                        'name': serie_name,
+                        'name': '{} ({})'.format(serie_name, year) if year else serie_name,
                         'description': description,
                         'iconimage': image,
                         'url': url,
@@ -419,7 +419,7 @@ def series_250(param=None):
         setcontent('tvshows')
         for serie_name, image, url, description, imdb_id, original_name, year in itens:
             addMenuItem({
-                'name': serie_name,
+                'name': '{} ({})'.format(serie_name, year) if year else serie_name,
                 'description': description,
                 'iconimage': image,
                 'url': url,
@@ -472,7 +472,7 @@ def series_popular(param=None):
         setcontent('tvshows')
         for serie_name, image, url, description, imdb_id, original_name, year in itens:
             addMenuItem({
-                'name': serie_name,
+                'name': '{} ({})'.format(serie_name, year) if year else serie_name,
                 'description': description,
                 'iconimage': image,
                 'url': url,

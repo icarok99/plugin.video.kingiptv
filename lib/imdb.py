@@ -120,6 +120,29 @@ class IMDBScraper:
             url = self.base + chart_path
             response = requests.get(url, headers=self.headers)
             html_text = response.text
+
+            # Mapa de imdb_id -> year extraído do __NEXT_DATA__
+            year_map = {}
+            try:
+                next_data = self._extract_next_data(html_text)
+                if next_data:
+                    edges = (
+                        next_data.get('props', {}).get('pageProps', {})
+                        .get('pageData', {}).get('chartTitles', {}).get('edges', [])
+                    )
+                    for edge in edges:
+                        node = edge.get('node', {})
+                        nid = node.get('id', '')
+                        year_val = node.get('releaseYear', {})
+                        if isinstance(year_val, dict):
+                            year_val = str(year_val.get('year', '') or '')
+                        else:
+                            year_val = str(year_val or '')
+                        if nid and year_val and year_val != '0':
+                            year_map[nid] = year_val
+            except Exception:
+                pass
+
             json_match = re.search(r'<script type="application/ld\+json">(.+?)</script>', html_text, re.DOTALL)
             if not json_match:
                 return itens
@@ -145,16 +168,17 @@ class IMDBScraper:
                     movie_name = alternate_title if alternate_title else original_name
                     if not movie_name:
                         continue
-                url = data['url']
+                item_url = data['url']
                 description = html.unescape(data.get('description', ''))
                 image = resize_poster(data.get('image', ''))
                 if not image:
                     continue
-                imdb_id = 'tt' + re.findall(r'/tt(.*?)/', url)[0]
+                imdb_id = 'tt' + re.findall(r'/tt(.*?)/', item_url)[0]
+                year = year_map.get(imdb_id, '')
                 if content_type == 'series':
-                    all_items.append((serie_name, image, url, description, imdb_id, original_name))
+                    all_items.append((serie_name, image, item_url, description, imdb_id, original_name, year))
                 else:
-                    all_items.append((movie_name, image, url, description, imdb_id, original_name))
+                    all_items.append((movie_name, image, item_url, description, imdb_id, original_name, year))
             start = (page - 1) * per_page
             end = start + per_page
             itens = all_items[start:end]

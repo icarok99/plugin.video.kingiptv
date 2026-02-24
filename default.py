@@ -341,7 +341,7 @@ def find_movies():
                 setcontent('movies')
                 for movie_name, image, url, description, imdb_id, original_name, year in results:
                     addMenuItem({
-                        'name': movie_name,
+                        'name': '{} ({})'.format(movie_name, year) if year and year != '0' else movie_name,
                         'description': description,
                         'iconimage': image,
                         'fanart': image,
@@ -389,9 +389,9 @@ def movies_250(param=None):
     itens = all_items[start:end_]
     if itens:
         setcontent('movies')
-        for movie_name, image, url, description, imdb_id, original_name in itens:
+        for movie_name, image, url, description, imdb_id, original_name, year in itens:
             addMenuItem({
-                'name': movie_name,
+                'name': '{} ({})'.format(movie_name, year) if year else movie_name,
                 'description': description,
                 'iconimage': image,
                 'fanart': image,
@@ -399,6 +399,7 @@ def movies_250(param=None):
                 'imdbnumber': imdb_id,
                 'movie_name': movie_name,
                 'original_name': original_name,
+                'year': year,
                 'playable': True
             }, destiny='/play_resolve_movies', folder=False)
         if end_ < len(all_items):
@@ -441,9 +442,9 @@ def movies_popular(param=None):
     itens = all_items[start:end_]
     if itens:
         setcontent('movies')
-        for movie_name, image, url, description, imdb_id, original_name in itens:
+        for movie_name, image, url, description, imdb_id, original_name, year in itens:
             addMenuItem({
-                'name': movie_name,
+                'name': '{} ({})'.format(movie_name, year) if year else movie_name,
                 'description': description,
                 'iconimage': image,
                 'fanart': image,
@@ -451,6 +452,7 @@ def movies_popular(param=None):
                 'imdbnumber': imdb_id,
                 'movie_name': movie_name,
                 'original_name': original_name,
+                'year': year,
                 'playable': True
             }, destiny='/play_resolve_movies', folder=False)
         if end_ < len(all_items):

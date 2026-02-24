@@ -417,7 +417,7 @@ def series_250(param=None):
     itens = all_items[start:end_]
     if itens:
         setcontent('tvshows')
-        for serie_name, image, url, description, imdb_id, original_name in itens:
+        for serie_name, image, url, description, imdb_id, original_name, year in itens:
             addMenuItem({
                 'name': serie_name,
                 'description': description,
@@ -470,7 +470,7 @@ def series_popular(param=None):
     itens = all_items[start:end_]
     if itens:
         setcontent('tvshows')
-        for serie_name, image, url, description, imdb_id, original_name in itens:
+        for serie_name, image, url, description, imdb_id, original_name, year in itens:
             addMenuItem({
                 'name': serie_name,
                 'description': description,

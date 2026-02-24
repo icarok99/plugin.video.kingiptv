@@ -82,71 +82,85 @@ class IMDBScraper:
                 img_original = list_item.get('primaryImage', {}).get('url', '')
                 img = resize_poster(img_original)
 
+                plot_obj = list_item.get('plot', {})
+                if isinstance(plot_obj, dict):
+                    description = html.unescape(str(plot_obj.get('text', '')).strip())
+                else:
+                    description = html.unescape(str(plot_obj).strip()) if plot_obj else ''
+
                 if not img or not serie_name:
                     continue
 
                 page = f'{self.base}/title/{imdb_id}/'
-                itens.append((serie_name, img, page, year, imdb_id, original_name))
+                itens.append((serie_name, img, page, description, imdb_id, original_name, year))
 
         except Exception:
             pass
 
         return itens
 
-    def search_movies(self, search):
-        itens = []
-        try:
-            query = quote(search)
-            url = f'{self.base}/find/?q={query}&s=tt&ttype=movie'
-            response = requests.get(url, headers=self.headers)
+def search_movies(self, search):
+    itens = []
+    try:
+        query = quote(search)
+        url = f'{self.base}/find/?q={query}&s=tt&ttype=movie'
+        response = requests.get(url, headers=self.headers)
 
-            if response.status_code != 200:
-                return itens
+        if response.status_code != 200:
+            return itens
 
-            data = self._extract_next_data(response.text)
-            if not data:
-                return itens
+        data = self._extract_next_data(response.text)
+        if not data:
+            return itens
 
-            results = data.get('props', {}).get('pageProps', {}).get('titleResults', {}).get('results', [])
-            for item in results:
-                list_item = item.get('listItem', {})
-                if not list_item:
-                    continue
+        results = data.get('props', {}).get('pageProps', {}).get('titleResults', {}).get('results', [])
+        for item in results:
+            list_item = item.get('listItem', {})
+            if not list_item:
+                continue
 
-                imdb_id = item.get('index', '')
-                if imdb_id.startswith('tt'):
-                    imdb_id = imdb_id[2:]
-                imdb_id = 'tt' + imdb_id
+            imdb_id = item.get('index', '')
+            if imdb_id.startswith('tt'):
+                imdb_id = imdb_id[2:]
+            imdb_id = 'tt' + imdb_id
 
-                title_obj = list_item.get('titleText', {})
-                if isinstance(title_obj, dict):
-                    movie_name = html.unescape(str(title_obj.get('text', '')).strip())
-                else:
-                    movie_name = html.unescape(str(title_obj).strip()) if title_obj else ''
+            title_obj = list_item.get('titleText', {})
+            if isinstance(title_obj, dict):
+                movie_name = html.unescape(str(title_obj.get('text', '')).strip())
+            else:
+                movie_name = html.unescape(str(title_obj).strip()) if title_obj else ''
 
-                original_title_obj = list_item.get('originalTitleText', {})
-                if isinstance(original_title_obj, dict):
-                    original_name = html.unescape(str(original_title_obj.get('text', '')).strip())
-                else:
-                    original_name = html.unescape(str(original_title_obj).strip()) if original_title_obj else ''
+            original_title_obj = list_item.get('originalTitleText', {})
+            if isinstance(original_title_obj, dict):
+                original_name = html.unescape(str(original_title_obj.get('text', '')).strip())
+            else:
+                original_name = html.unescape(str(original_title_obj).strip()) if original_title_obj else ''
 
-                if not movie_name:
-                    movie_name = original_name
+            if not movie_name:
+                movie_name = original_name
 
-                year = str(list_item.get('releaseYear', 0) or 0)
-                img_original = list_item.get('primaryImage', {}).get('url', '')
-                img = resize_poster(img_original)
+            year = str(list_item.get('releaseYear', 0) or 0)
 
-                if not img or not movie_name:
-                    continue
+            img_original = list_item.get('primaryImage', {}).get('url', '')
+            img = resize_poster(img_original)
 
-                page = f'{self.base}/title/{imdb_id}/'
-                itens.append((movie_name, img, page, year, imdb_id, original_name))
+            plot_obj = list_item.get('plot', {})
+            if isinstance(plot_obj, dict):
+                description = html.unescape(str(plot_obj.get('text', '')).strip())
+            else:
+                description = html.unescape(str(plot_obj).strip()) if plot_obj else ''
 
-        except Exception:
-            pass
+            if not img or not movie_name:
+                continue
 
-        return itens
+            page = f'{self.base}/title/{imdb_id}/'
+
+            itens.append((movie_name, img, page, description, imdb_id, original_name, year))
+
+    except Exception:
+        pass
+
+    return itens
 
     def series_250(self, page=1, per_page=250):
         return self._chart_parser('/pt/chart/toptv/?ref_=chttvm_nv_menu', page, per_page, content_type='series')
@@ -276,3 +290,4 @@ class IMDBScraper:
             pass
 
         return itens
+

@@ -288,5 +288,3 @@ class IMDBScraper:
             pass
 
         return itens
-
-

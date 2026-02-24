@@ -365,7 +365,7 @@ def find_series():
             results = imdb.IMDBScraper().search_series(query)
             if results:
                 setcontent('tvshows')
-                for serie_name, image, url, description, imdb_id, original_name in results:
+                for serie_name, image, url, description, imdb_id, original_name, year in results:
                     addMenuItem({
                         'name': serie_name,
                         'description': description,
@@ -373,7 +373,8 @@ def find_series():
                         'url': url,
                         'imdbnumber': imdb_id,
                         'serie_name': serie_name,
-                        'original_name': original_name
+                        'original_name': original_name,
+                        'year': year,
                     }, destiny='/open_imdb_seasons')
                 end()
                 setview('List')

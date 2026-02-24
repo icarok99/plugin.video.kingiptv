@@ -137,16 +137,24 @@ class IMDBScraper:
                     original_name = html.unescape(str(original_name.get('text', '')).strip())
                 else:
                     original_name = html.unescape(str(original_name).strip())
-                name = alternate_title if alternate_title else original_name
-                if not name:
-                    continue
+                if content_type == 'series':
+                    serie_name = alternate_title if alternate_title else original_name
+                    if not serie_name:
+                        continue
+                else:
+                    movie_name = alternate_title if alternate_title else original_name
+                    if not movie_name:
+                        continue
                 url = data['url']
                 description = html.unescape(data.get('description', ''))
                 image = resize_poster(data.get('image', ''))
                 if not image:
                     continue
                 imdb_id = 'tt' + re.findall(r'/tt(.*?)/', url)[0]
-                all_items.append((name, image, url, description, imdb_id, original_name))
+                if content_type == 'series':
+                    all_items.append((serie_name, image, url, description, imdb_id, original_name))
+                else:
+                    all_items.append((movie_name, image, url, description, imdb_id, original_name))
             start = (page - 1) * per_page
             end = start + per_page
             itens = all_items[start:end]

@@ -187,7 +187,7 @@ msgstr "Contagem regressiva em segundos"
 
 msgctxt "#32202"
 msgid "Skip Intro ({}s)"
-msgstr "Pular abertura em ({}s)"
+msgstr "Pular abertura ({}s)"
 
 msgctxt "#32205"
 msgid "INTRO"

@@ -168,3 +168,27 @@ msgstr "Reproduzir ({0}s)"
 msgctxt "#32109"
 msgid "Cancel"
 msgstr "Cancelar"
+
+msgctxt "#32110"
+msgid "Skip Intro"
+msgstr "Pular abertura"
+
+msgctxt "#32111"
+msgid "Enable Skip Intro"
+msgstr "Ativar pular abertura"
+
+msgctxt "#32113"
+msgid "Skip automatically (no confirmation)"
+msgstr "Pular automaticamente (sem confirmação)"
+
+msgctxt "#32114"
+msgid "Countdown seconds"
+msgstr "Contagem regressiva em segundos"
+
+msgctxt "#32202"
+msgid "Skip Intro ({}s)"
+msgstr "Pular abertura em ({}s)"
+
+msgctxt "#32205"
+msgid "INTRO"
+msgstr "Pular abertura"

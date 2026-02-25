@@ -3,9 +3,11 @@
 import xbmc
 import threading
 from lib.upnext import get_upnext_service
+from lib.skipservice import get_skip_service
 from lib.database import KingDatabase
 
 db = KingDatabase()
+
 
 class KingPlayer(xbmc.Player):
 
@@ -13,23 +15,28 @@ class KingPlayer(xbmc.Player):
         super(KingPlayer, self).__init__()
 
         self.imdb_id = None
-        self.season = None
+        self.season  = None
         self.episode = None
 
         self._state_lock = threading.Lock()
         self._monitoring = False
 
         self.upnext_service = get_upnext_service(self, db)
+        self.skip_service   = get_skip_service(self, db)
+
+    # ------------------------------------------------------------------
+    # Início de reprodução
+    # ------------------------------------------------------------------
 
     def start_monitoring(self, imdb_id, season, episode):
         with self._state_lock:
-            self.imdb_id = imdb_id
-            self.season = season
-            self.episode = episode
+            self.imdb_id  = imdb_id
+            self.season   = season
+            self.episode  = episode
             self._monitoring = True
 
         monitor = xbmc.Monitor()
-        waited = 0
+        waited  = 0
         max_wait = 30
 
         while waited < max_wait and not monitor.abortRequested():
@@ -40,16 +47,43 @@ class KingPlayer(xbmc.Player):
 
         if self.isPlayingVideo() and self._monitoring:
             self.upnext_service.start_monitoring(self.imdb_id, self.season, self.episode)
+            self.skip_service.start_monitoring(self.imdb_id, self.season, self.episode)
 
-    def onPlayBackEnded(self):
+    # ------------------------------------------------------------------
+    # Marcação manual de pontos de skip (chamável do plugin/skin)
+    # ------------------------------------------------------------------
+
+    def mark_skip_point(self, point):
+        """
+        Grava o timestamp atual como ponto de skip para o episódio em
+        reprodução.
+
+        Parameters
+        ----------
+        point : str  —  'intro_start' | 'intro_end' | 'credits_start'
+        """
         with self._state_lock:
             imdb_id = self.imdb_id
             season  = self.season
             episode = self.episode
+
+        if imdb_id and season is not None and episode is not None:
+            self.skip_service.mark_skip_point(imdb_id, season, episode, point)
+
+    # ------------------------------------------------------------------
+    # Callbacks de reprodução
+    # ------------------------------------------------------------------
+
+    def onPlayBackEnded(self):
+        with self._state_lock:
+            imdb_id  = self.imdb_id
+            season   = self.season
+            episode  = self.episode
             self._monitoring = False
             self.imdb_id = None
-            self.season = None
+            self.season  = None
             self.episode = None
+
         already_marked = (
             self.upnext_service and
             self.upnext_service._watched_marked
@@ -59,21 +93,27 @@ class KingPlayer(xbmc.Player):
             threading.Thread(
                 target=db.mark_watched,
                 args=(imdb_id, season, episode),
-                daemon=True
+                daemon=True,
             ).start()
 
         if self.upnext_service:
             self.upnext_service.stop_monitoring()
 
+        if self.skip_service:
+            self.skip_service.stop_monitoring()
+
     def onPlayBackStopped(self):
         with self._state_lock:
             self._monitoring = False
             self.imdb_id = None
-            self.season = None
+            self.season  = None
             self.episode = None
 
         if self.upnext_service:
             self.upnext_service.stop_monitoring()
+
+        if self.skip_service:
+            self.skip_service.stop_monitoring()
 
     def onPlayBackError(self):
         with self._state_lock:
@@ -82,8 +122,17 @@ class KingPlayer(xbmc.Player):
         if self.upnext_service:
             self.upnext_service.stop_monitoring()
 
+        if self.skip_service:
+            self.skip_service.stop_monitoring()
+
+
+# ---------------------------------------------------------------------------
+# Singleton
+# ---------------------------------------------------------------------------
+
 _global_player = None
-_player_lock = threading.Lock()
+_player_lock   = threading.Lock()
+
 
 def get_player():
     global _global_player

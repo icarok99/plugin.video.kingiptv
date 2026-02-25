@@ -1,10 +1,13 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <settings>
-
     <category label="32100">
-        <setting id="upnext_enabled" type="bool" label="32101" default="true" />
-        <setting id="upnext_trigger_seconds" type="number" label="32102" default="30" />
-        <setting id="upnext_countdown_seconds" type="number" label="32103" default="10" />
+        <setting id="upnext_enabled" type="bool" label="32101" default="true"/>
+        <setting id="upnext_trigger_seconds" type="number" label="32102" default="30"/>
+        <setting id="upnext_countdown_seconds" type="number" label="32103" default="10"/>
     </category>
-
+    <category label="32110">
+        <setting id="skip_intro_enabled" type="bool" label="32111" default="true"/>
+        <setting id="skip_auto_skip" type="bool" label="32113" default="false"/>
+        <setting id="skip_countdown_seconds" type="number" label="32114" default="5"/>
+    </category>
 </settings>

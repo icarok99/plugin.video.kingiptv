@@ -16,6 +16,7 @@ except ImportError:
 from lib.player import get_player
 from lib.database import KingDatabase
 from lib.loading_window import loading_manager
+from lib.skipservice import prefetch_skip_timestamps
 
 db = KingDatabase()
 
@@ -527,7 +528,15 @@ def open_imdb_episodes(param):
             original_name=original_name,
             episodes_data=itens
         )
-        
+
+        # Prefetch de timestamps de skip para toda a temporada em background
+        prefetch_skip_timestamps(
+            imdb_id=imdb_id,
+            season=int(season),
+            episode_count=len(itens),
+            database=db
+        )
+
         watched_set = db.get_watched_in_season(imdb_id, int(season))
 
         setcontent('episodes')

@@ -75,6 +75,25 @@ class KingDatabase:
             ''')
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_watched_imdb_season ON watched_episodes(imdb_id, season)')
 
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS skip_timestamps (
+                    imdb_id     TEXT    NOT NULL,
+                    season      INTEGER NOT NULL,
+                    episode     INTEGER NOT NULL,
+                    intro_start REAL,
+                    intro_end   REAL,
+                    recap_start REAL,
+                    recap_end   REAL,
+                    outro_start REAL,
+                    source      TEXT    DEFAULT 'api',
+                    updated_at  TEXT,
+                    PRIMARY KEY (imdb_id, season, episode)
+                )
+            ''')
+            cursor.execute(
+                'CREATE INDEX IF NOT EXISTS idx_skip_imdb ON skip_timestamps(imdb_id)'
+            )
+
             cursor.execute("PRAGMA table_info(episodes_metadata)")
             columns = [column[1] for column in cursor.fetchall()]
             if 'is_last_episode' not in columns:
@@ -216,3 +235,175 @@ class KingDatabase:
                 WHERE imdb_id = ? AND season = ?
             ''', (imdb_id, int(season)))
             return {row[0] for row in cursor.fetchall()}
+
+    def get_skip_timestamps(self, imdb_id, season, episode):
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT intro_start, intro_end,
+                       recap_start, recap_end,
+                       outro_start, source
+                FROM skip_timestamps
+                WHERE imdb_id = ? AND season = ? AND episode = ?
+                ORDER BY CASE source WHEN 'manual' THEN 0 ELSE 1 END
+                LIMIT 1
+            ''', (imdb_id, int(season), int(episode)))
+            row = cursor.fetchone()
+            if not row:
+                return None
+
+            keys = ('intro_start', 'intro_end',
+                    'recap_start', 'recap_end',
+                    'outro_start', 'source')
+            result = {k: v for k, v in zip(keys, row) if v is not None}
+            return result if len(result) > 1 else None
+
+    def save_skip_timestamps(self, imdb_id, season, episode,
+                             intro_start=None, intro_end=None,
+                             recap_start=None, recap_end=None,
+                             outro_start=None, source='api'):
+        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+
+            if source == 'manual':
+                cursor.execute('''
+                    INSERT INTO skip_timestamps
+                        (imdb_id, season, episode,
+                         intro_start, intro_end,
+                         recap_start, recap_end,
+                         outro_start, source, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'manual', ?)
+                    ON CONFLICT(imdb_id, season, episode)
+                    DO UPDATE SET
+                        intro_start = COALESCE(excluded.intro_start, intro_start),
+                        intro_end   = COALESCE(excluded.intro_end,   intro_end),
+                        recap_start = COALESCE(excluded.recap_start, recap_start),
+                        recap_end   = COALESCE(excluded.recap_end,   recap_end),
+                        outro_start = COALESCE(excluded.outro_start, outro_start),
+                        source      = 'manual',
+                        updated_at  = excluded.updated_at
+                ''', (
+                    imdb_id, int(season), int(episode),
+                    intro_start, intro_end,
+                    recap_start, recap_end,
+                    outro_start, now,
+                ))
+            else:
+                cursor.execute('''
+                    INSERT INTO skip_timestamps
+                        (imdb_id, season, episode,
+                         intro_start, intro_end,
+                         recap_start, recap_end,
+                         outro_start, source, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'api', ?)
+                    ON CONFLICT(imdb_id, season, episode)
+                    DO UPDATE SET
+                        intro_start = CASE WHEN source = 'manual' THEN intro_start
+                                          ELSE COALESCE(excluded.intro_start, intro_start) END,
+                        intro_end   = CASE WHEN source = 'manual' THEN intro_end
+                                          ELSE COALESCE(excluded.intro_end,   intro_end)   END,
+                        recap_start = CASE WHEN source = 'manual' THEN recap_start
+                                          ELSE COALESCE(excluded.recap_start, recap_start) END,
+                        recap_end   = CASE WHEN source = 'manual' THEN recap_end
+                                          ELSE COALESCE(excluded.recap_end,   recap_end)   END,
+                        outro_start = CASE WHEN source = 'manual' THEN outro_start
+                                          ELSE COALESCE(excluded.outro_start, outro_start) END,
+                        source      = CASE WHEN source = 'manual' THEN 'manual' ELSE 'api' END,
+                        updated_at  = CASE WHEN source = 'manual' THEN updated_at
+                                          ELSE excluded.updated_at END
+                ''', (
+                    imdb_id, int(season), int(episode),
+                    intro_start, intro_end,
+                    recap_start, recap_end,
+                    outro_start, now,
+                ))
+
+    def skip_timestamps_checked(self, imdb_id, season, episode):
+        """
+        Retorna True se o episódio já foi consultado na API (linha existe na
+        tabela), mesmo que não tenha intro (todos os campos de tempo NULL).
+        Usado pelo prefetch para não re-buscar episódios já verificados.
+        """
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                'SELECT 1 FROM skip_timestamps WHERE imdb_id = ? AND season = ? AND episode = ?',
+                (imdb_id, int(season), int(episode))
+            )
+            return cursor.fetchone() is not None
+
+    def save_skip_timestamps_batch(self, imdb_id, season, episodes_data, source='api'):
+        if not episodes_data:
+            return 0
+        
+        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        batch_data = []
+        
+        for ep_data in episodes_data:
+            episode = int(ep_data.get('episode', 0))
+            if episode <= 0:
+                continue
+                
+            batch_data.append((
+                imdb_id,
+                int(season),
+                episode,
+                ep_data.get('intro_start'),
+                ep_data.get('intro_end'),
+                ep_data.get('recap_start'),
+                ep_data.get('recap_end'),
+                ep_data.get('outro_start'),
+                now
+            ))
+        
+        if not batch_data:
+            return 0
+        
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            
+            if source == 'manual':
+                cursor.executemany('''
+                    INSERT INTO skip_timestamps
+                        (imdb_id, season, episode,
+                         intro_start, intro_end,
+                         recap_start, recap_end,
+                         outro_start, source, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'manual', ?)
+                    ON CONFLICT(imdb_id, season, episode)
+                    DO UPDATE SET
+                        intro_start = COALESCE(excluded.intro_start, intro_start),
+                        intro_end   = COALESCE(excluded.intro_end,   intro_end),
+                        recap_start = COALESCE(excluded.recap_start, recap_start),
+                        recap_end   = COALESCE(excluded.recap_end,   recap_end),
+                        outro_start = COALESCE(excluded.outro_start, outro_start),
+                        source      = 'manual',
+                        updated_at  = excluded.updated_at
+                ''', batch_data)
+            else:
+                cursor.executemany('''
+                    INSERT INTO skip_timestamps
+                        (imdb_id, season, episode,
+                         intro_start, intro_end,
+                         recap_start, recap_end,
+                         outro_start, source, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'api', ?)
+                    ON CONFLICT(imdb_id, season, episode)
+                    DO UPDATE SET
+                        intro_start = CASE WHEN source = 'manual' THEN intro_start
+                                          ELSE COALESCE(excluded.intro_start, intro_start) END,
+                        intro_end   = CASE WHEN source = 'manual' THEN intro_end
+                                          ELSE COALESCE(excluded.intro_end,   intro_end)   END,
+                        recap_start = CASE WHEN source = 'manual' THEN recap_start
+                                          ELSE COALESCE(excluded.recap_start, recap_start) END,
+                        recap_end   = CASE WHEN source = 'manual' THEN recap_end
+                                          ELSE COALESCE(excluded.recap_end,   recap_end)   END,
+                        outro_start = CASE WHEN source = 'manual' THEN outro_start
+                                          ELSE COALESCE(excluded.outro_start, outro_start) END,
+                        source      = CASE WHEN source = 'manual' THEN 'manual' ELSE 'api' END,
+                        updated_at  = CASE WHEN source = 'manual' THEN updated_at
+                                          ELSE excluded.updated_at END
+                ''', batch_data)
+        
+        return len(batch_data)

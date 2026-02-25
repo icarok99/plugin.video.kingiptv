@@ -47,8 +47,6 @@ class SkipDialog(xbmcgui.WindowXMLDialog):
 
     def onInit(self):
         try:
-            self.getControl(self.BUTTON_SKIP).setLabel(_str(32202).format(self.countdown_seconds))
-
             if self.episode_label:
                 try:
                     self.getControl(self.LABEL_EP).setLabel(self.episode_label)

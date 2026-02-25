@@ -47,6 +47,8 @@ class SkipDialog(xbmcgui.WindowXMLDialog):
 
     def onInit(self):
         try:
+            self.getControl(self.BUTTON_SKIP).setLabel(_str(32202).format(self.countdown_seconds))
+
             if self.episode_label:
                 try:
                     self.getControl(self.LABEL_EP).setLabel(self.episode_label)
@@ -58,6 +60,11 @@ class SkipDialog(xbmcgui.WindowXMLDialog):
                     self.getControl(self.IMAGE_THUMB).setImage(self.thumbnail)
                 except Exception:
                     pass
+
+            try:
+                self.setFocusId(self.BUTTON_SKIP)
+            except Exception:
+                pass
 
             self._start_countdown()
         except Exception:
@@ -74,6 +81,7 @@ class SkipDialog(xbmcgui.WindowXMLDialog):
             try:
                 progress = int((remaining / float(self.countdown_seconds)) * 100)
                 self.getControl(self.PROGRESS_BAR).setPercent(progress)
+                self.getControl(self.BUTTON_SKIP).setLabel(_str(32202).format(remaining))
             except Exception:
                 break
             time.sleep(1)

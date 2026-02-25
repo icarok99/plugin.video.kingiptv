@@ -45,22 +45,9 @@ class SkipDialog(xbmcgui.WindowXMLDialog):
         except Exception:
             pass
 
-    def _button_label(self, remaining=None):
-        if remaining is not None:
-            return _str(32202).format(remaining)
-        return _str(32110)
-
-    def _tag_label(self):
-        return _str(32205)
-
     def onInit(self):
         try:
-            self.getControl(self.BUTTON_SKIP).setLabel(self._button_label(self.countdown_seconds))
-
-            try:
-                self.getControl(self.LABEL_TAG).setLabel(self._tag_label())
-            except Exception:
-                pass
+            self.getControl(self.BUTTON_SKIP).setLabel(_str(32202).format(self.countdown_seconds))
 
             if self.episode_label:
                 try:
@@ -94,7 +81,7 @@ class SkipDialog(xbmcgui.WindowXMLDialog):
             try:
                 progress = int((remaining / float(self.countdown_seconds)) * 100)
                 self.getControl(self.PROGRESS_BAR).setPercent(progress)
-                self.getControl(self.BUTTON_SKIP).setLabel(self._button_label(remaining))
+                self.getControl(self.BUTTON_SKIP).setLabel(_str(32202).format(remaining))
             except Exception:
                 break
             time.sleep(1)

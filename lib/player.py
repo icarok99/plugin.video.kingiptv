@@ -8,7 +8,6 @@ from lib.database import KingDatabase
 
 db = KingDatabase()
 
-
 class KingPlayer(xbmc.Player):
 
     def __init__(self):
@@ -23,10 +22,6 @@ class KingPlayer(xbmc.Player):
 
         self.upnext_service = get_upnext_service(self, db)
         self.skip_service   = get_skip_service(self, db)
-
-    # ------------------------------------------------------------------
-    # Início de reprodução
-    # ------------------------------------------------------------------
 
     def start_monitoring(self, imdb_id, season, episode):
         with self._state_lock:
@@ -49,19 +44,7 @@ class KingPlayer(xbmc.Player):
             self.upnext_service.start_monitoring(self.imdb_id, self.season, self.episode)
             self.skip_service.start_monitoring(self.imdb_id, self.season, self.episode)
 
-    # ------------------------------------------------------------------
-    # Marcação manual de pontos de skip (chamável do plugin/skin)
-    # ------------------------------------------------------------------
-
     def mark_skip_point(self, point):
-        """
-        Grava o timestamp atual como ponto de skip para o episódio em
-        reprodução.
-
-        Parameters
-        ----------
-        point : str  —  'intro_start' | 'intro_end' | 'credits_start'
-        """
         with self._state_lock:
             imdb_id = self.imdb_id
             season  = self.season
@@ -69,10 +52,6 @@ class KingPlayer(xbmc.Player):
 
         if imdb_id and season is not None and episode is not None:
             self.skip_service.mark_skip_point(imdb_id, season, episode, point)
-
-    # ------------------------------------------------------------------
-    # Callbacks de reprodução
-    # ------------------------------------------------------------------
 
     def onPlayBackEnded(self):
         with self._state_lock:
@@ -125,14 +104,8 @@ class KingPlayer(xbmc.Player):
         if self.skip_service:
             self.skip_service.stop_monitoring()
 
-
-# ---------------------------------------------------------------------------
-# Singleton
-# ---------------------------------------------------------------------------
-
 _global_player = None
 _player_lock   = threading.Lock()
-
 
 def get_player():
     global _global_player

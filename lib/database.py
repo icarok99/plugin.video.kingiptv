@@ -16,7 +16,6 @@ DATABASE_PATH = os.path.join(ADDON_DATA, 'kingiptv.db')
 if not xbmcvfs.exists(ADDON_DATA):
     xbmcvfs.mkdirs(ADDON_DATA)
 
-
 class KingDatabase:
 
     def __init__(self):
@@ -82,9 +81,6 @@ class KingDatabase:
                     episode     INTEGER NOT NULL,
                     intro_start REAL,
                     intro_end   REAL,
-                    recap_start REAL,
-                    recap_end   REAL,
-                    outro_start REAL,
                     source      TEXT    DEFAULT 'api',
                     updated_at  TEXT,
                     PRIMARY KEY (imdb_id, season, episode)
@@ -240,9 +236,7 @@ class KingDatabase:
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
-                SELECT intro_start, intro_end,
-                       recap_start, recap_end,
-                       outro_start, source
+                SELECT intro_start, intro_end, source
                 FROM skip_timestamps
                 WHERE imdb_id = ? AND season = ? AND episode = ?
                 ORDER BY CASE source WHEN 'manual' THEN 0 ELSE 1 END
@@ -252,16 +246,13 @@ class KingDatabase:
             if not row:
                 return None
 
-            keys = ('intro_start', 'intro_end',
-                    'recap_start', 'recap_end',
-                    'outro_start', 'source')
+            keys = ('intro_start', 'intro_end', 'source')
             result = {k: v for k, v in zip(keys, row) if v is not None}
             return result if len(result) > 1 else None
 
     def save_skip_timestamps(self, imdb_id, season, episode,
                              intro_start=None, intro_end=None,
-                             recap_start=None, recap_end=None,
-                             outro_start=None, source='api'):
+                             source='api'):
         now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         with self._get_connection() as conn:
             cursor = conn.cursor()
@@ -271,60 +262,41 @@ class KingDatabase:
                     INSERT INTO skip_timestamps
                         (imdb_id, season, episode,
                          intro_start, intro_end,
-                         recap_start, recap_end,
-                         outro_start, source, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'manual', ?)
+                         source, updated_at)
+                    VALUES (?, ?, ?, ?, ?, 'manual', ?)
                     ON CONFLICT(imdb_id, season, episode)
                     DO UPDATE SET
                         intro_start = COALESCE(excluded.intro_start, intro_start),
                         intro_end   = COALESCE(excluded.intro_end,   intro_end),
-                        recap_start = COALESCE(excluded.recap_start, recap_start),
-                        recap_end   = COALESCE(excluded.recap_end,   recap_end),
-                        outro_start = COALESCE(excluded.outro_start, outro_start),
                         source      = 'manual',
                         updated_at  = excluded.updated_at
                 ''', (
                     imdb_id, int(season), int(episode),
-                    intro_start, intro_end,
-                    recap_start, recap_end,
-                    outro_start, now,
+                    intro_start, intro_end, now,
                 ))
             else:
                 cursor.execute('''
                     INSERT INTO skip_timestamps
                         (imdb_id, season, episode,
                          intro_start, intro_end,
-                         recap_start, recap_end,
-                         outro_start, source, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'api', ?)
+                         source, updated_at)
+                    VALUES (?, ?, ?, ?, ?, 'api', ?)
                     ON CONFLICT(imdb_id, season, episode)
                     DO UPDATE SET
                         intro_start = CASE WHEN source = 'manual' THEN intro_start
                                           ELSE COALESCE(excluded.intro_start, intro_start) END,
                         intro_end   = CASE WHEN source = 'manual' THEN intro_end
                                           ELSE COALESCE(excluded.intro_end,   intro_end)   END,
-                        recap_start = CASE WHEN source = 'manual' THEN recap_start
-                                          ELSE COALESCE(excluded.recap_start, recap_start) END,
-                        recap_end   = CASE WHEN source = 'manual' THEN recap_end
-                                          ELSE COALESCE(excluded.recap_end,   recap_end)   END,
-                        outro_start = CASE WHEN source = 'manual' THEN outro_start
-                                          ELSE COALESCE(excluded.outro_start, outro_start) END,
                         source      = CASE WHEN source = 'manual' THEN 'manual' ELSE 'api' END,
                         updated_at  = CASE WHEN source = 'manual' THEN updated_at
                                           ELSE excluded.updated_at END
                 ''', (
                     imdb_id, int(season), int(episode),
-                    intro_start, intro_end,
-                    recap_start, recap_end,
-                    outro_start, now,
+                    intro_start, intro_end, now,
                 ))
 
+
     def skip_timestamps_checked(self, imdb_id, season, episode):
-        """
-        Retorna True se o episódio já foi consultado na API (linha existe na
-        tabela), mesmo que não tenha intro (todos os campos de tempo NULL).
-        Usado pelo prefetch para não re-buscar episódios já verificados.
-        """
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
@@ -351,9 +323,6 @@ class KingDatabase:
                 episode,
                 ep_data.get('intro_start'),
                 ep_data.get('intro_end'),
-                ep_data.get('recap_start'),
-                ep_data.get('recap_end'),
-                ep_data.get('outro_start'),
                 now
             ))
         
@@ -368,16 +337,12 @@ class KingDatabase:
                     INSERT INTO skip_timestamps
                         (imdb_id, season, episode,
                          intro_start, intro_end,
-                         recap_start, recap_end,
-                         outro_start, source, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'manual', ?)
+                         source, updated_at)
+                    VALUES (?, ?, ?, ?, ?, 'manual', ?)
                     ON CONFLICT(imdb_id, season, episode)
                     DO UPDATE SET
                         intro_start = COALESCE(excluded.intro_start, intro_start),
                         intro_end   = COALESCE(excluded.intro_end,   intro_end),
-                        recap_start = COALESCE(excluded.recap_start, recap_start),
-                        recap_end   = COALESCE(excluded.recap_end,   recap_end),
-                        outro_start = COALESCE(excluded.outro_start, outro_start),
                         source      = 'manual',
                         updated_at  = excluded.updated_at
                 ''', batch_data)
@@ -386,21 +351,14 @@ class KingDatabase:
                     INSERT INTO skip_timestamps
                         (imdb_id, season, episode,
                          intro_start, intro_end,
-                         recap_start, recap_end,
-                         outro_start, source, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'api', ?)
+                         source, updated_at)
+                    VALUES (?, ?, ?, ?, ?, 'api', ?)
                     ON CONFLICT(imdb_id, season, episode)
                     DO UPDATE SET
                         intro_start = CASE WHEN source = 'manual' THEN intro_start
                                           ELSE COALESCE(excluded.intro_start, intro_start) END,
                         intro_end   = CASE WHEN source = 'manual' THEN intro_end
                                           ELSE COALESCE(excluded.intro_end,   intro_end)   END,
-                        recap_start = CASE WHEN source = 'manual' THEN recap_start
-                                          ELSE COALESCE(excluded.recap_start, recap_start) END,
-                        recap_end   = CASE WHEN source = 'manual' THEN recap_end
-                                          ELSE COALESCE(excluded.recap_end,   recap_end)   END,
-                        outro_start = CASE WHEN source = 'manual' THEN outro_start
-                                          ELSE COALESCE(excluded.outro_start, outro_start) END,
                         source      = CASE WHEN source = 'manual' THEN 'manual' ELSE 'api' END,
                         updated_at  = CASE WHEN source = 'manual' THEN updated_at
                                           ELSE excluded.updated_at END

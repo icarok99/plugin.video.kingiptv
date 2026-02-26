@@ -17,6 +17,10 @@ from lib.player import get_player
 from lib.database import KingDatabase
 from lib.loading_window import loading_manager
 from lib.skipservice import prefetch_skip_timestamps
+from lib.db_manager import KingDatabaseManager
+
+db_manager = KingDatabaseManager()
+db_manager.check_auto_expiry()
 
 db = KingDatabase()
 

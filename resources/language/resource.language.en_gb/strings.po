@@ -202,7 +202,7 @@ msgid "Enable automatic cleanup"
 msgstr ""
 
 msgctxt "#33002"
-msgid "Days until expiration"
+msgid "Set days to delete the database"
 msgstr ""
 
 msgctxt "#33003"

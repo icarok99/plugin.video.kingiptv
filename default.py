@@ -545,7 +545,7 @@ def open_imdb_episodes(param):
             imdb_id=imdb_id,
             season=int(season),
             episode_count=len(itens),
-            database=db
+            database=get_db()
         )
 
         watched_set = get_db().get_watched_in_season(imdb_id, int(season))

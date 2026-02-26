@@ -192,3 +192,23 @@ msgstr ""
 msgctxt "#32205"
 msgid "INTRO"
 msgstr ""
+
+msgctxt "#33000"
+msgid "Database"
+msgstr ""
+
+msgctxt "#33001"
+msgid "Enable automatic cleanup"
+msgstr ""
+
+msgctxt "#33002"
+msgid "Days until expiration"
+msgstr ""
+
+msgctxt "#33003"
+msgid "Delete database"
+msgstr ""
+
+msgctxt "#33004"
+msgid "Are you sure you want to delete the database?"
+msgstr ""

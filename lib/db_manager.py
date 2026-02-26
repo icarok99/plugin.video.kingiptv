@@ -22,12 +22,11 @@ def notify(message, time_ms=4000):
 class KingDatabaseManager:
 
     def _db_exists(self):
-        return xbmcvfs.exists(DATABASE_PATH)
+        return os.path.isfile(DATABASE_PATH)
 
     def _get_setting_int(self, key, default=7):
         try:
-            value = int(ADDON.getSetting(key))
-            return value if value > 0 else default
+            return int(ADDON.getSetting(key))
         except (ValueError, TypeError):
             return default
 
@@ -50,12 +49,19 @@ class KingDatabaseManager:
                 return False
 
         try:
-            xbmcvfs.delete(DATABASE_PATH)
-            notify('Banco de dados excluído com sucesso.')
-            return True
-        except Exception as e:
+            os.remove(DATABASE_PATH)
+        except Exception:
+            try:
+                xbmcvfs.delete(DATABASE_PATH)
+            except Exception:
+                pass
+
+        if self._db_exists():
             notify('Falha ao excluir o banco de dados.')
             return False
+
+        notify('Banco de dados excluído com sucesso.')
+        return True
 
     def check_auto_expiry(self):
         if not self._get_setting_bool('db_auto_cleanup_enabled'):
@@ -70,10 +76,8 @@ class KingDatabaseManager:
         if last_modified is None:
             return
 
-        if datetime.now() - last_modified >= timedelta(days=expiry_days):
-            notify('Banco de dados expirado. Limpando automaticamente...')
-            if self.delete_database(confirm=False):
-                notify('Limpeza automática concluída.')
+        if expiry_days == 0 or datetime.now() - last_modified >= timedelta(days=expiry_days):
+            self.delete_database(confirm=False)
 
 
 if __name__ == '__main__':

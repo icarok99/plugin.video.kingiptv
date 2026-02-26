@@ -192,3 +192,23 @@ msgstr "Pular abertura ({}s)"
 msgctxt "#32205"
 msgid "INTRO"
 msgstr "Pular abertura"
+
+msgctxt "#33000"
+msgid "Database"
+msgstr "Banco de dados"
+
+msgctxt "#33001"
+msgid "Enable automatic cleanup"
+msgstr "Ativar limpeza automática"
+
+msgctxt "#33002"
+msgid "Set days to delete the database"
+msgstr "Defina os dias para excluir o banco de dados."
+
+msgctxt "#33003"
+msgid "Delete database"
+msgstr "Excluir banco de dados"
+
+msgctxt "#33004"
+msgid "Are you sure you want to delete the database?"
+msgstr "Tem certeza de que deseja excluir o banco de dados?"

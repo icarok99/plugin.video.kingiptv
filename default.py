@@ -541,7 +541,7 @@ def open_imdb_episodes(param):
 
         setcontent('episodes')
         for episode_number, name, img, fanart, description in itens:
-            name_full = '{}x{} {}'.format(season, str(episode_number).zfill(2), name)
+            name_full = '{}x{} - {}'.format(season, str(episode_number).zfill(2), name)
 
             addMenuItem({
                 'name': name_full,

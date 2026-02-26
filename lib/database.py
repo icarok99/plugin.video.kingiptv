@@ -81,7 +81,7 @@ class KingDatabase:
                     episode     INTEGER NOT NULL,
                     intro_start REAL,
                     intro_end   REAL,
-                    source      TEXT    DEFAULT 'api',
+                    source      TEXT    DEFAULT 'introhater',
                     updated_at  TEXT,
                     PRIMARY KEY (imdb_id, season, episode)
                 )
@@ -252,7 +252,7 @@ class KingDatabase:
 
     def save_skip_timestamps(self, imdb_id, season, episode,
                              intro_start=None, intro_end=None,
-                             source='api'):
+                             source='introhater'):
         now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         with self._get_connection() as conn:
             cursor = conn.cursor()
@@ -280,21 +280,20 @@ class KingDatabase:
                         (imdb_id, season, episode,
                          intro_start, intro_end,
                          source, updated_at)
-                    VALUES (?, ?, ?, ?, ?, 'api', ?)
+                    VALUES (?, ?, ?, ?, ?, 'introhater', ?)
                     ON CONFLICT(imdb_id, season, episode)
                     DO UPDATE SET
                         intro_start = CASE WHEN source = 'manual' THEN intro_start
                                           ELSE COALESCE(excluded.intro_start, intro_start) END,
                         intro_end   = CASE WHEN source = 'manual' THEN intro_end
                                           ELSE COALESCE(excluded.intro_end,   intro_end)   END,
-                        source      = CASE WHEN source = 'manual' THEN 'manual' ELSE 'api' END,
+                        source      = CASE WHEN source = 'manual' THEN 'manual' ELSE 'introhater' END,
                         updated_at  = CASE WHEN source = 'manual' THEN updated_at
                                           ELSE excluded.updated_at END
                 ''', (
                     imdb_id, int(season), int(episode),
                     intro_start, intro_end, now,
                 ))
-
 
     def skip_timestamps_checked(self, imdb_id, season, episode):
         with self._get_connection() as conn:
@@ -305,7 +304,7 @@ class KingDatabase:
             )
             return cursor.fetchone() is not None
 
-    def save_skip_timestamps_batch(self, imdb_id, season, episodes_data, source='api'):
+    def save_skip_timestamps_batch(self, imdb_id, season, episodes_data, source='introhater'):
         if not episodes_data:
             return 0
         
@@ -352,14 +351,14 @@ class KingDatabase:
                         (imdb_id, season, episode,
                          intro_start, intro_end,
                          source, updated_at)
-                    VALUES (?, ?, ?, ?, ?, 'api', ?)
+                    VALUES (?, ?, ?, ?, ?, 'introhater', ?)
                     ON CONFLICT(imdb_id, season, episode)
                     DO UPDATE SET
                         intro_start = CASE WHEN source = 'manual' THEN intro_start
                                           ELSE COALESCE(excluded.intro_start, intro_start) END,
                         intro_end   = CASE WHEN source = 'manual' THEN intro_end
                                           ELSE COALESCE(excluded.intro_end,   intro_end)   END,
-                        source      = CASE WHEN source = 'manual' THEN 'manual' ELSE 'api' END,
+                        source      = CASE WHEN source = 'manual' THEN 'manual' ELSE 'introhater' END,
                         updated_at  = CASE WHEN source = 'manual' THEN updated_at
                                           ELSE excluded.updated_at END
                 ''', batch_data)

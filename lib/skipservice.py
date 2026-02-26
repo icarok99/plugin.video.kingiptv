@@ -14,7 +14,8 @@ except Exception:
     import requests
 
 _addon = xbmcaddon.Addon()
-INTRODB_URL = 'https://api.introdb.app/segments'
+INTROHATER_URL = 'https://introhater.com/api/v1/segments/'
+API_KEY = 'fdabaadfd236074b11787e0a0bda805baf91b881f86c28223c57944d7c3bf112'
 
 def _str(string_id):
     return _addon.getLocalizedString(string_id)
@@ -120,6 +121,7 @@ class SkipService:
         self.auto_skip = self._get_bool(addon, 'skip_auto_skip', False)
         self.countdown_seconds = self._get_int(addon, 'skip_countdown_seconds', 5)
         self.tolerance = 2.0
+        self.headers = {"X-API-Key": API_KEY}
 
     @staticmethod
     def _get_bool(addon, key, default):
@@ -152,7 +154,7 @@ class SkipService:
 
     def save_skip_point(self, imdb_id, season, episode, point):
         try:
-            self.db.save_skip_point(imdb_id, season, episode, point)
+            self.db.save_skip_timestamps(imdb_id, season, episode, point)
         except Exception:
             pass
 
@@ -203,22 +205,32 @@ class SkipService:
             timestamps = self.db.get_skip_timestamps(imdb_id, season, episode)
             if timestamps:
                 return timestamps
-            url = '{}?imdb_id={}&season={}&episode={}'.format(INTRODB_URL, imdb_id, season, episode)
-            import requests as _requests
-            response = _requests.get(url, timeout=6)
-            if response.status_code == 200:
-                data = response.json()
-                timestamps = {}
-                seg = data.get('intro')
-                if seg:
-                    timestamps['intro_start'] = float(seg.get('start_sec', 0))
-                    timestamps['intro_end'] = float(seg.get('end_sec', 0))
-                if timestamps:
-                    timestamps['source'] = 'api'
-                    self.db.save_skip_timestamps(imdb_id, season, episode, **timestamps)
-                    return timestamps
+
+            video_id = f"{imdb_id}:{season}:{episode}"
+            url = f"{INTROHATER_URL}{video_id}"
+            response = requests.get(url, headers=self.headers, timeout=6)
+            
+            if response.status_code != 200:
+                return {}
+
+            data = response.json()
+            timestamps = {}
+            intro_segments = [seg for seg in data if seg.get('label') == 'Intro' and seg.get('verified')]
+            
+            if intro_segments:
+                intro_segments.sort(key=lambda s: s.get('votes', 0), reverse=True)
+                seg = intro_segments[0]
+                timestamps['intro_start'] = float(seg.get('start', 0))
+                timestamps['intro_end'] = float(seg.get('end', 0))
+
+            if timestamps:
+                timestamps['source'] = 'introhater'
+                self.db.save_skip_timestamps(imdb_id, season, episode, **timestamps)
+                return timestamps
+                
         except Exception:
             pass
+        
         return {}
 
 MAX_WORKERS = 5
@@ -244,71 +256,59 @@ def prefetch_skip_timestamps(imdb_id, season, episode_count, database):
         daemon=True,
     ).start()
 
-def _fetch_one_episode(imdb_id, season, ep):
-    import requests as _requests
-    for attempt in range(3):
-        try:
-            url = '{}?imdb_id={}&season={}&episode={}'.format(INTRODB_URL, imdb_id, season, ep)
-            response = _requests.get(url, timeout=8)
-            if response.status_code == 429:
-                time.sleep(10 * (attempt + 1))
-                continue
-            if response.status_code == 200:
-                try:
-                    data = response.json()
-                except Exception:
-                    return (ep, None, None)
-                seg = data.get('intro')
-                if seg:
-                    return (ep, float(seg.get('start_sec', 0)), float(seg.get('end_sec', 0)))
-                return (ep, None, None)
-            return (ep, None, None)
-        except Exception:
-            time.sleep(2)
-    return (ep, None, None)
-
 def _prefetch_worker(imdb_id, season, episode_count, database):
     key = (imdb_id, season)
     try:
-        if episode_count > 0:
-            candidates = list(range(1, episode_count + 1))
-        else:
+        url = f"{INTROHATER_URL}{imdb_id}"
+        headers = {"X-API-Key": API_KEY}
+        for attempt in range(3):
             try:
-                rows = database.get_season_episodes(imdb_id, season)
-                candidates = [r['episode'] for r in rows] if rows else []
-            except Exception:
-                candidates = []
-        if not candidates:
-            return
-        pending = []
-        for ep in candidates:
-            try:
-                already_checked = database.skip_timestamps_checked(imdb_id, season, ep)
-            except Exception:
-                already_checked = False
-            if not already_checked:
-                pending.append(ep)
-        if not pending:
-            return
-        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-            futures = {
-                executor.submit(_fetch_one_episode, imdb_id, season, ep): ep
-                for ep in pending
-            }
-            for future in as_completed(futures):
-                try:
-                    ep, intro_start, intro_end = future.result()
-                except Exception:
+                response = requests.get(url, headers=headers, timeout=8)
+                if response.status_code == 429:
+                    time.sleep(10 * (attempt + 1))
                     continue
-                try:
-                    database.save_skip_timestamps(
-                        imdb_id, season, ep,
-                        intro_start=intro_start,
-                        intro_end=intro_end,
-                        source='api',
-                    )
-                except Exception:
-                    pass
+                if response.status_code == 200:
+                    data = response.json()
+                    break
+            except Exception:
+                time.sleep(2)
+        else:
+            return
+
+        episodes_data = {}
+        for seg in data:
+            if seg.get('label') != 'Intro' or not seg.get('verified'):
+                continue
+            video_id = seg.get('videoId', '')
+            if not video_id.startswith(imdb_id + ':'):
+                continue
+            parts = video_id.split(':')
+            if len(parts) != 3:
+                continue
+            _, seg_season, seg_episode = parts
+            seg_season = int(seg_season)
+            seg_episode = int(seg_episode)
+            if seg_season != season:
+                continue
+            key_ep = (seg_season, seg_episode)
+            if key_ep not in episodes_data:
+                episodes_data[key_ep] = []
+            episodes_data[key_ep].append(seg)
+
+        batch_save = []
+        for (s, ep), segs in episodes_data.items():
+            if segs:
+                segs.sort(key=lambda s: s.get('votes', 0), reverse=True)
+                best_seg = segs[0]
+                batch_save.append({
+                    'episode': ep,
+                    'intro_start': float(best_seg.get('start', 0)),
+                    'intro_end': float(best_seg.get('end', 0))
+                })
+
+        if batch_save:
+            database.save_skip_timestamps_batch(imdb_id, season, batch_save, source='introhater')
+
         with _prefetched_seasons_lock:
             _prefetched_seasons.add(key)
     finally:

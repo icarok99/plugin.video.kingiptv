@@ -14,10 +14,22 @@ except ImportError:
     from urllib.parse import urlencode
 
 from lib.player import get_player
-from lib.database import KingDatabase
 from lib.loading_window import loading_manager
+from lib.skipservice import prefetch_skip_timestamps
+from lib.db_manager import KingDatabaseManager
 
-db = KingDatabase()
+db_manager = KingDatabaseManager()
+db_manager.check_auto_expiry()
+
+from lib.database import KingDatabase
+
+_db = None
+
+def get_db():
+    global _db
+    if _db is None:
+        _db = KingDatabase()
+    return _db
 
 _addon = xbmcaddon.Addon()
 
@@ -520,19 +532,27 @@ def open_imdb_episodes(param):
     
     itens = imdb.IMDBScraper().imdb_episodes(url)
     if itens:
-        db.save_season_episodes(
+        get_db().save_season_episodes(
             imdb_id=imdb_id,
             season=int(season),
             serie_name=serie_name,
             original_name=original_name,
             episodes_data=itens
         )
-        
-        watched_set = db.get_watched_in_season(imdb_id, int(season))
+
+        # Prefetch de timestamps de skip para toda a temporada em background
+        prefetch_skip_timestamps(
+            imdb_id=imdb_id,
+            season=int(season),
+            episode_count=len(itens),
+            database=db
+        )
+
+        watched_set = get_db().get_watched_in_season(imdb_id, int(season))
 
         setcontent('episodes')
         for episode_number, name, img, fanart, description in itens:
-            name_full = '{}x{} {}'.format(season, str(episode_number).zfill(2), name)
+            name_full = '{}x{} - {}'.format(season, str(episode_number).zfill(2), name)
 
             addMenuItem({
                 'name': name_full,
@@ -714,7 +734,7 @@ def play_resolve_series(param):
             current_position = playlist.getposition()
             
             if current_position == 0 or playlist.size() <= 1:
-                all_episodes = db.get_season_episodes(imdb_number, season_num)
+                all_episodes = get_db().get_season_episodes(imdb_number, season_num)
                 if all_episodes:
                     build_series_playlist(
                         imdb_number=imdb_number,

@@ -4,8 +4,8 @@ import xbmc
 import xbmcgui
 import threading
 import time
-
 import xbmcaddon as _xbmcaddon
+
 _addon = _xbmcaddon.Addon()
 
 def getString(string_id):
@@ -37,41 +37,32 @@ class UpNextDialog(xbmcgui.WindowXMLDialog):
 
     def onInit(self):
         try:
-            serie_name = self.next_episode_info.get('serie_name', '')
             next_season = self.next_episode_info.get('next_season', 0)
             next_episode = self.next_episode_info.get('next_episode', 0)
             episode_title = self.next_episode_info.get('episode_title', '')
             thumbnail = self.next_episode_info.get('thumbnail', '')
-
             if episode_title:
                 next_text = '{}x{:02d} - {}'.format(next_season, next_episode, episode_title)
             else:
                 next_text = '{}x{:02d}'.format(next_season, next_episode)
-
             self.getControl(self.LABEL_NEXT_EPISODE).setLabel(next_text)
-
             if thumbnail:
                 self.getControl(self.IMAGE_THUMBNAIL).setImage(thumbnail)
-
             try:
                 self.setFocusId(self.BUTTON_PLAY_NOW)
-            except:
+            except Exception:
                 pass
-
             self._start_countdown()
-
         except Exception:
             pass
 
     def _start_countdown(self):
         self._stop_countdown = False
-        self.countdown_thread = threading.Thread(target=self._countdown_loop)
-        self.countdown_thread.daemon = True
+        self.countdown_thread = threading.Thread(target=self._countdown_loop, daemon=True)
         self.countdown_thread.start()
 
     def _countdown_loop(self):
         remaining = self.countdown_seconds
-
         while remaining > 0 and not self._stop_countdown:
             try:
                 progress = int((remaining / float(self.countdown_seconds)) * 100)
@@ -81,7 +72,6 @@ class UpNextDialog(xbmcgui.WindowXMLDialog):
                 remaining -= 1
             except Exception:
                 break
-
         if not self._stop_countdown and remaining == 0:
             self.auto_play = True
             self._do_advance()
@@ -93,7 +83,6 @@ class UpNextDialog(xbmcgui.WindowXMLDialog):
             self._stop_countdown = True
             self._do_advance()
             self.close()
-
         elif controlId == self.BUTTON_CANCEL:
             self.cancelled = True
             self._stop_countdown = True
@@ -101,278 +90,92 @@ class UpNextDialog(xbmcgui.WindowXMLDialog):
 
     def onAction(self, action):
         action_id = action.getId()
-
         if action_id in (xbmcgui.ACTION_SELECT_ITEM, xbmcgui.ACTION_PLAYER_PLAY):
             try:
-                focused_control = self.getFocusId()
-
-                if focused_control == self.BUTTON_PLAY_NOW:
+                focused = self.getFocusId()
+                if focused == self.BUTTON_PLAY_NOW:
                     self.auto_play = True
                     self._stop_countdown = True
                     self._do_advance()
                     self.close()
                     return
-
-                elif focused_control == self.BUTTON_CANCEL:
+                elif focused == self.BUTTON_CANCEL:
                     self.cancelled = True
                     self._stop_countdown = True
                     self.close()
                     return
             except Exception:
                 pass
-
         elif action_id in (xbmcgui.ACTION_NAV_BACK, xbmcgui.ACTION_PREVIOUS_MENU, xbmcgui.ACTION_STOP):
             self.cancelled = True
             self._stop_countdown = True
             self.close()
-            return
-
-        elif action_id in (xbmcgui.ACTION_MOVE_LEFT, xbmcgui.ACTION_MOVE_RIGHT,
-                          xbmcgui.ACTION_MOVE_UP, xbmcgui.ACTION_MOVE_DOWN):
+        elif action_id in (xbmcgui.ACTION_MOVE_LEFT, xbmcgui.ACTION_MOVE_RIGHT, xbmcgui.ACTION_MOVE_UP, xbmcgui.ACTION_MOVE_DOWN):
             pass
-
         elif action_id == xbmcgui.ACTION_PLAYER_PLAY:
             self.auto_play = True
             self._stop_countdown = True
             self._do_advance()
             self.close()
-            return
 
 class UpNextService:
 
-    def __init__(self, player, database):
-        self.player = player
+    def __init__(self, database):
         self.db = database
-
         import xbmcaddon
         addon = xbmcaddon.Addon()
-
-        self.enabled = addon.getSettingBool('upnext_enabled') if hasattr(addon, 'getSettingBool') else True
-        self.countdown_seconds = addon.getSettingInt('upnext_countdown_seconds') if hasattr(addon, 'getSettingInt') else 10
-        self.trigger_seconds = addon.getSettingInt('upnext_trigger_seconds') if hasattr(addon, 'getSettingInt') else 30
-
-        if self.countdown_seconds == 0:
-            self.countdown_seconds = 10
-        if self.trigger_seconds == 0:
-            self.trigger_seconds = 30
-
-        self.monitoring = False
-        self.monitor_thread = None
-        self._stop_monitoring = False
-        self._monitor_lock = threading.Lock()
-
-        self._dialog_shown = False
-        self._dialog_lock = threading.Lock()
-
+        self.enabled = self._get_bool(addon, 'upnext_enabled', True)
+        self.countdown_seconds = self._get_int(addon, 'upnext_countdown_seconds', 10)
+        self.trigger_seconds = self._get_int(addon, 'upnext_trigger_seconds', 30)
         self._watched_marked = False
 
-    def _parse_episode_format(self, text):
-        import re
-        if not text:
-            return None, None, None
+    @staticmethod
+    def _get_bool(addon, key, default):
+        try:
+            return addon.getSettingBool(key)
+        except Exception:
+            val = addon.getSetting(key)
+            return default if val == '' else val.lower() == 'true'
 
-        match = re.match(r'^(\d+)x(\d+)\s*(.*)', text)
-        if match:
-            season = int(match.group(1))
-            episode = int(match.group(2))
-            title = match.group(3).strip()
-            return season, episode, title
-        return None, None, None
+    @staticmethod
+    def _get_int(addon, key, default):
+        try:
+            v = addon.getSettingInt(key)
+            return v if v > 0 else default
+        except Exception:
+            try:
+                return int(addon.getSetting(key)) or default
+            except Exception:
+                return default
 
-    def start_monitoring(self, imdb_id, season, episode):
+    def load(self, imdb_id, season, episode):
         if not self.enabled:
-            return
-
-        with self._dialog_lock:
-            self._dialog_shown = False
+            return None
         self._watched_marked = False
-
-        with self._monitor_lock:
-            self._stop_monitoring = True
-            self.monitoring = False
-
-        if self.monitor_thread and self.monitor_thread.is_alive():
-            self.monitor_thread.join(timeout=3.0)
         next_info = None
-
         playlist = xbmc.PlayList(xbmc.PLAYLIST_VIDEO)
-        has_next_in_playlist = (
-            playlist.size() > 0 and
-            playlist.getposition() < (playlist.size() - 1)
-        )
-
-        if has_next_in_playlist:
+        if playlist.size() > 0 and playlist.getposition() < (playlist.size() - 1):
             next_info = self._get_next_from_playlist()
-
         if not next_info or not next_info.get('next_season'):
-            next_episode_metadata = self.db.get_next_episode_metadata(imdb_id, season, episode)
-            if next_episode_metadata:
+            meta = self.db.get_next_episode_metadata(imdb_id, season, episode)
+            if meta:
                 next_info = {
                     'imdb_id': imdb_id,
-                    'serie_name': next_episode_metadata.get('serie_name', ''),
-                    'original_name': next_episode_metadata.get('original_name', ''),
-                    'next_season': next_episode_metadata.get('season'),
-                    'next_episode': next_episode_metadata.get('episode'),
-                    'episode_title': next_episode_metadata.get('episode_title', ''),
-                    'thumbnail': next_episode_metadata.get('thumbnail', ''),
-                    'fanart': next_episode_metadata.get('fanart', ''),
-                    'description': next_episode_metadata.get('description', '')
+                    'serie_name': meta.get('serie_name', ''),
+                    'original_name': meta.get('original_name', ''),
+                    'next_season': meta.get('season'),
+                    'next_episode': meta.get('episode'),
+                    'episode_title': meta.get('episode_title', ''),
+                    'thumbnail': meta.get('thumbnail', ''),
+                    'fanart': meta.get('fanart', ''),
+                    'description': meta.get('description', ''),
                 }
+        return next_info
 
-        with self._monitor_lock:
-            self.monitoring = True
-            self._stop_monitoring = False
-
-        self.monitor_thread = threading.Thread(
-            target=self._monitoring_loop,
-            args=(imdb_id, season, episode, next_info,)
-        )
-        self.monitor_thread.daemon = True
-        self.monitor_thread.start()
-
-    def _get_next_from_playlist(self):
-        try:
-            playlist = xbmc.PlayList(xbmc.PLAYLIST_VIDEO)
-            current_position = playlist.getposition()
-
-            if current_position >= (playlist.size() - 1):
-                return None
-
-            next_item = playlist[current_position + 1]
-
-            if hasattr(next_item, 'getVideoInfoTag'):
-                info_tag = next_item.getVideoInfoTag()
-
-                season = info_tag.getSeason() if hasattr(info_tag, 'getSeason') else 0
-                episode = info_tag.getEpisode() if hasattr(info_tag, 'getEpisode') else 0
-                episode_title = info_tag.getTitle() if hasattr(info_tag, 'getTitle') else ''
-
-                return {
-                    'serie_name': info_tag.getTVShowTitle() if hasattr(info_tag, 'getTVShowTitle') else '',
-                    'original_name': info_tag.getOriginalTitle() if hasattr(info_tag, 'getOriginalTitle') else '',
-                    'next_season': season,
-                    'next_episode': episode,
-                    'episode_title': episode_title,
-                    'thumbnail': next_item.getArt('thumb'),
-                    'fanart': next_item.getArt('fanart'),
-                    'description': info_tag.getPlot() if hasattr(info_tag, 'getPlot') else ''
-                }
-            else:
-                label = next_item.getLabel()
-                season, episode, episode_title = self._parse_episode_format(label)
-
-                return {
-                    'serie_name': '',
-                    'next_season': season if season else 0,
-                    'next_episode': episode if episode else 0,
-                    'episode_title': episode_title if episode_title else label,
-                    'thumbnail': next_item.getArt('thumb'),
-                    'fanart': next_item.getArt('fanart'),
-                    'description': ''
-                }
-
-        except Exception:
-            return None
-
-    def _monitoring_loop(self, imdb_id, season, episode, next_info):
-        monitor = xbmc.Monitor()
-
-        waited = 0
-        max_wait_time = 30
-
-        while waited < max_wait_time:
-            if not self.player.isPlayingVideo():
-                if monitor.waitForAbort(0.5):
-                    with self._monitor_lock:
-                        self.monitoring = False
-                    return
-                waited += 0.5
-                continue
-            else:
-                break
-
-        if not self.player.isPlayingVideo():
-            with self._monitor_lock:
-                self.monitoring = False
-            return
-
-        total_time = 0
-        time_attempts = 0
-        max_attempts = 60
-
-        while time_attempts < max_attempts:
-            try:
-                total_time = self.player.getTotalTime()
-                if total_time > 60:
-                    break
-            except:
-                pass
-
-            time_attempts += 1
-
-            if self._stop_monitoring:
-                with self._monitor_lock:
-                    self.monitoring = False
-                return
-
-            monitor.waitForAbort(0.5)
-
-        if total_time <= 60:
-            with self._monitor_lock:
-                self.monitoring = False
-            return
-
-        watched_marked = False
-        watched_at = total_time * 0.9
-
-        safety_margin = 30
-        start_at_90_percent = total_time * 0.9
-        start_at_trigger = total_time - self.trigger_seconds - safety_margin
-        start_monitoring_at = min(start_at_90_percent, start_at_trigger)
-
-        while self.player.isPlayingVideo() and not self._stop_monitoring:
-            try:
-                current_time = self.player.getTime()
-                if current_time >= start_monitoring_at:
-                    break
-                if monitor.waitForAbort(1):
-                    break
-            except Exception:
-                break
-
-        while self.player.isPlayingVideo() and not self._stop_monitoring:
-            try:
-                current_time = self.player.getTime()
-                remaining_time = total_time - current_time
-                if not watched_marked and current_time >= watched_at:
-                    watched_marked = True
-                    self._watched_marked = True
-                    threading.Thread(
-                        target=self.db.mark_watched,
-                        args=(imdb_id, season, episode),
-                        daemon=True
-                    ).start()
-                if next_info and remaining_time <= self.trigger_seconds:
-                    with self._dialog_lock:
-                        if not self._dialog_shown:
-                            self._dialog_shown = True
-                            self._show_upnext_dialog(next_info)
-                            break
-
-                if monitor.waitForAbort(0.5):
-                    break
-
-            except Exception:
-                break
-
-        with self._monitor_lock:
-            self.monitoring = False
-
-    def _show_upnext_dialog(self, next_info):
+    def show_dialog(self, next_info):
         try:
             import xbmcaddon
             addon = xbmcaddon.Addon()
-
             dialog = UpNextDialog(
                 'upnext-dialog.xml',
                 addon.getAddonInfo('path'),
@@ -383,30 +186,48 @@ class UpNextService:
             )
             dialog.doModal()
             del dialog
-
         except Exception:
             pass
 
-    def stop_monitoring(self):
-        with self._monitor_lock:
-            self._stop_monitoring = True
-            was_monitoring = self.monitoring
-            self.monitoring = False
+    def _parse_episode_format(self, text):
+        import re
+        if not text:
+            return None, None, None
+        match = re.match(r'^(\d+)x(\d+)\s*(.*)', text)
+        if match:
+            return int(match.group(1)), int(match.group(2)), match.group(3).strip()
+        return None, None, None
 
-        if was_monitoring and self.monitor_thread and self.monitor_thread.is_alive():
-            self.monitor_thread.join(timeout=3.0)
-
-    def is_monitoring(self):
-        with self._monitor_lock:
-            return self.monitoring
-
-_upnext_service = None
-_upnext_lock = threading.Lock()
-
-def get_upnext_service(player, database):
-    global _upnext_service
-
-    with _upnext_lock:
-        if _upnext_service is None:
-            _upnext_service = UpNextService(player, database)
-        return _upnext_service
+    def _get_next_from_playlist(self):
+        try:
+            playlist = xbmc.PlayList(xbmc.PLAYLIST_VIDEO)
+            current_position = playlist.getposition()
+            if current_position >= (playlist.size() - 1):
+                return None
+            next_item = playlist[current_position + 1]
+            if hasattr(next_item, 'getVideoInfoTag'):
+                info_tag = next_item.getVideoInfoTag()
+                return {
+                    'serie_name': info_tag.getTVShowTitle() if hasattr(info_tag, 'getTVShowTitle') else '',
+                    'original_name': info_tag.getOriginalTitle() if hasattr(info_tag, 'getOriginalTitle') else '',
+                    'next_season': info_tag.getSeason() if hasattr(info_tag, 'getSeason') else 0,
+                    'next_episode': info_tag.getEpisode() if hasattr(info_tag, 'getEpisode') else 0,
+                    'episode_title': info_tag.getTitle() if hasattr(info_tag, 'getTitle') else '',
+                    'thumbnail': next_item.getArt('thumb'),
+                    'fanart': next_item.getArt('fanart'),
+                    'description': info_tag.getPlot() if hasattr(info_tag, 'getPlot') else '',
+                }
+            else:
+                label = next_item.getLabel()
+                season, episode, episode_title = self._parse_episode_format(label)
+                return {
+                    'serie_name': '',
+                    'next_season': season or 0,
+                    'next_episode': episode or 0,
+                    'episode_title': episode_title or label,
+                    'thumbnail': next_item.getArt('thumb'),
+                    'fanart': next_item.getArt('fanart'),
+                    'description': '',
+                }
+        except Exception:
+            return None

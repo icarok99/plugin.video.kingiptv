@@ -168,3 +168,47 @@ msgstr ""
 msgctxt "#32109"
 msgid "Cancel"
 msgstr ""
+
+msgctxt "#32110"
+msgid "Skip Intro"
+msgstr ""
+
+msgctxt "#32111"
+msgid "Enable Skip Intro"
+msgstr ""
+
+msgctxt "#32113"
+msgid "Skip automatically (no confirmation)"
+msgstr ""
+
+msgctxt "#32114"
+msgid "Countdown seconds"
+msgstr ""
+
+msgctxt "#32202"
+msgid "Skip Intro ({}s)"
+msgstr ""
+
+msgctxt "#32205"
+msgid "INTRO"
+msgstr ""
+
+msgctxt "#33000"
+msgid "Database"
+msgstr ""
+
+msgctxt "#33001"
+msgid "Enable automatic cleanup"
+msgstr ""
+
+msgctxt "#33002"
+msgid "Set days to delete the database"
+msgstr ""
+
+msgctxt "#33003"
+msgid "Delete database"
+msgstr ""
+
+msgctxt "#33004"
+msgid "Are you sure you want to delete the database?"
+msgstr ""

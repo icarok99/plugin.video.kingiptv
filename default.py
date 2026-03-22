@@ -44,7 +44,7 @@ try:
     import requests
 
     UPDATE_CHECK_FILE = os.path.join(profile, 'last_checked_date.txt')
-    REMOTE_DATE_URL = 'https://raw.githubusercontent.com/icarok99/plugin.video.kingiptv/main/last_update.txt'
+    REMOTE_DATE_URL = 'https://raw.githubusercontent.com/icarok99-alt/plugin.video.kingiptv/main/last_update.txt'
 
     def get_local_date():
         if os.path.exists(UPDATE_CHECK_FILE):

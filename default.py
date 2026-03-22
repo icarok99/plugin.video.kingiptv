@@ -270,7 +270,7 @@ def channels_pluto():
         setcontent('videos')
         for i in channels:
             name, desc, thumb, url = i
-            addMenuItem({'name': name, 'description': desc, 'iconimage': thumb, 'url': url}, destiny='/play_pluto')
+            addMenuItem({'name': name, 'description': desc, 'iconimage': thumb, 'url': url, 'playable': 'true'}, destiny='/play_pluto', folder=False)
         end()
         setview('List')
     else:
@@ -284,18 +284,31 @@ def play_pluto(param):
     description = param.get('description', '')
     
     if url:
-        play_item = xbmcgui.ListItem(path=url)
-        play_item.setContentLookup(False)
-        play_item.setMimeType("application/vnd.apple.mpegurl")
-        play_item.setArt({"icon": iconimage or "DefaultVideo.png", "thumb": iconimage or "DefaultVideo.png"})
-        info_tag = play_item.getVideoInfoTag() if hasattr(play_item, 'getVideoInfoTag') else None
-        if info_tag:
-            info_tag.setTitle(name)
-            info_tag.setPlot(description)
-            info_tag.setMediaType('video')
-        else:
-            play_item.setInfo('video', {'title': name, 'plot': description})
-        xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, play_item)
+        helper = inputstreamhelper.Helper('hls')
+        if helper.check_inputstream():
+            headers = url.split("|")[1] if "|" in url else ''
+            url = url.split("|")[0] if "|" in url else url
+            play_item = xbmcgui.ListItem(path=url)
+            play_item.setProperty('inputstream', helper.inputstream_addon)
+            play_item.setProperty('inputstream.adaptive.manifest_type', 'hls')
+            play_item.setProperty(
+            'inputstream.adaptive.stream_headers',
+            headers if headers else 'User-Agent=Mozilla/5.0'
+            )
+            play_item.setProperty('inputstream.adaptive.manifest_headers',
+            headers if headers else 'User-Agent=Mozilla/5.0')          
+            play_item.setMimeType('application/x-mpegURL')
+            play_item.setProperty("inputstream.adaptive.live_delay", "0")
+            play_item.setProperty("inputstream.adaptive.manifest_update_parameter", "full")         
+            play_item.setArt({"icon": iconimage or "DefaultVideo.png", "thumb": iconimage or "DefaultVideo.png"})
+            info_tag = play_item.getVideoInfoTag() if hasattr(play_item, 'getVideoInfoTag') else None
+            if info_tag:
+                info_tag.setTitle(name)
+                info_tag.setPlot(description)
+                info_tag.setMediaType('video')
+            else:
+                play_item.setInfo('video', {'title': name, 'plot': description})
+            xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, play_item)
     else:
         notify(getString(32016))
 

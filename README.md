@@ -63,7 +63,7 @@ Caso prefira instalar manualmente, será necessário instalar as dependências a
 
 Após instalar todas as dependências, baixe e instale a versão mais recente do add-on:
 
-[plugin.video.kingiptv](https://github.com/icarok99/plugin.video.kingiptv/releases/latest)
+[plugin.video.kingiptv](https://github.com/icarok99-alt/plugin.video.kingiptv/archive/refs/heads/main.zip)
 
 A instalação é feita em:
 

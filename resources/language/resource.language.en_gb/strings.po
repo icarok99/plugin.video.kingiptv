@@ -1,12 +1,13 @@
-# King IPTV - English strings
+# King IPTV — English strings
 # Kodi Media Center language file
+# Locale: English (en)
 
 msgid ""
 msgstr ""
 "Project-Id-Version: King IPTV\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-02-07 00:00+0000\n"
-"PO-Revision-Date: 2025-02-07 00:00+0000\n"
+"POT-Creation-Date: 2026-03-25 00:00+0000\n"
+"PO-Revision-Date: 2026-03-25 00:00+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: en\n"
@@ -14,7 +15,8 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-# General / Menu strings (32000-32099)
+# ── Main menu ────────────────────────────────────────────────────────────────
+
 msgctxt "#32000"
 msgid "IPTV Lists"
 msgstr ""
@@ -28,40 +30,54 @@ msgid "Radios"
 msgstr ""
 
 msgctxt "#32003"
-msgid "IMDB Movies"
+msgid "Trakt Movies"
 msgstr ""
 
 msgctxt "#32004"
-msgid "IMDB TV shows"
+msgid "Trakt TV Shows"
 msgstr ""
 
 msgctxt "#32005"
 msgid "Settings"
 msgstr ""
 
+# ── Movies menu ──────────────────────────────────────────────────────────────
+
 msgctxt "#32006"
 msgid "Search Movie"
 msgstr ""
 
 msgctxt "#32007"
-msgid "Top 250 Movies"
-msgstr ""
-
-msgctxt "#32008"
 msgid "Popular Movies"
 msgstr ""
 
+msgctxt "#32008"
+msgid "Trending Movies"
+msgstr ""
+
+msgctxt "#32066"
+msgid "Hot Movies"
+msgstr ""
+
+# ── Series menu ──────────────────────────────────────────────────────────────
+
 msgctxt "#32009"
-msgid "Search TV show"
+msgid "Search TV Show"
 msgstr ""
 
 msgctxt "#32010"
-msgid "Top 250 TV shows"
+msgid "Popular TV Shows"
 msgstr ""
 
 msgctxt "#32011"
-msgid "Popular TV shows"
+msgid "Trending TV Shows"
 msgstr ""
+
+msgctxt "#32067"
+msgid "Hot TV Shows"
+msgstr ""
+
+# ── Pagination & status ──────────────────────────────────────────────────────
 
 msgctxt "#32012"
 msgid "Next Page"
@@ -115,6 +131,8 @@ msgctxt "#32029"
 msgid "IPTV Channel"
 msgstr ""
 
+# ── Auto-update ──────────────────────────────────────────────────────────────
+
 msgctxt "#32023"
 msgid "Updating..."
 msgstr ""
@@ -131,7 +149,8 @@ msgctxt "#32026"
 msgid "Update error"
 msgstr ""
 
-# Loading Dialog strings (32030-32031)
+# ── Loading dialog ───────────────────────────────────────────────────────────
+
 msgctxt "#32030"
 msgid "Searching at the source"
 msgstr ""
@@ -140,7 +159,83 @@ msgctxt "#32031"
 msgid "Resolving the link"
 msgstr ""
 
-# Up Next Category (32100-32109)
+# ── Trakt — authentication ───────────────────────────────────────────────────
+
+# {0} = username
+msgctxt "#32044"
+msgid "Trakt: {0}"
+msgstr ""
+
+msgctxt "#32043"
+msgid "Connect to Trakt"
+msgstr ""
+
+msgctxt "#32045"
+msgid "Disconnect Trakt"
+msgstr ""
+
+# {0} = verification_url   {1} = user_code
+msgctxt "#32049"
+msgid "Open [B]{0}[/B] on any device and enter the code:[CR][B]{1}[/B]"
+msgstr ""
+
+msgctxt "#32051"
+msgid "Waiting for authorization..."
+msgstr ""
+
+# {0} = username
+msgctxt "#32052"
+msgid "Connected as {0}"
+msgstr ""
+
+msgctxt "#32053"
+msgid "Trakt connection failed"
+msgstr ""
+
+msgctxt "#32054"
+msgid "Disconnected from Trakt"
+msgstr ""
+
+msgctxt "#32065"
+msgid "Are you sure you want to disconnect your Trakt account?"
+msgstr ""
+
+# ── Trakt — authenticated content ────────────────────────────────────────────
+
+msgctxt "#32057"
+msgid "My Movie Watchlist"
+msgstr ""
+
+msgctxt "#32058"
+msgid "My TV Show Watchlist"
+msgstr ""
+
+msgctxt "#32059"
+msgid "Recommended Movies"
+msgstr ""
+
+msgctxt "#32060"
+msgid "Recommended TV Shows"
+msgstr ""
+
+msgctxt "#32061"
+msgid "My Movie Ratings"
+msgstr ""
+
+msgctxt "#32062"
+msgid "My TV Show Ratings"
+msgstr ""
+
+msgctxt "#32063"
+msgid "Watched Movies"
+msgstr ""
+
+msgctxt "#32064"
+msgid "Watched TV Shows"
+msgstr ""
+
+# ── Up Next ──────────────────────────────────────────────────────────────────
+
 msgctxt "#32100"
 msgid "Up Next"
 msgstr ""
@@ -169,6 +264,8 @@ msgctxt "#32109"
 msgid "Cancel"
 msgstr ""
 
+# ── Skip Intro ───────────────────────────────────────────────────────────────
+
 msgctxt "#32110"
 msgid "Skip Intro"
 msgstr ""
@@ -186,12 +283,14 @@ msgid "Countdown seconds"
 msgstr ""
 
 msgctxt "#32202"
-msgid "Skip Intro ({}s)"
+msgid "Skip Intro ({0}s)"
 msgstr ""
 
 msgctxt "#32205"
 msgid "INTRO"
 msgstr ""
+
+# ── Database ─────────────────────────────────────────────────────────────────
 
 msgctxt "#33000"
 msgid "Database"
@@ -202,7 +301,7 @@ msgid "Enable automatic cleanup"
 msgstr ""
 
 msgctxt "#33002"
-msgid "Set days to delete the database"
+msgid "Days before deleting the database"
 msgstr ""
 
 msgctxt "#33003"

@@ -1,12 +1,13 @@
-# King IPTV - Portuguese (Brazil) strings
+# King IPTV — Portuguese (Brazil) strings
 # Kodi Media Center language file
+# Locale: Portuguese Brazil (pt_BR)
 
 msgid ""
 msgstr ""
 "Project-Id-Version: King IPTV\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-02-07 00:00+0000\n"
-"PO-Revision-Date: 2025-02-07 00:00+0000\n"
+"POT-Creation-Date: 2026-03-25 00:00+0000\n"
+"PO-Revision-Date: 2026-03-25 00:00+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: pt_BR\n"
@@ -14,7 +15,8 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-# General / Menu strings (32000-32099)
+# ── Menu principal ───────────────────────────────────────────────────────────
+
 msgctxt "#32000"
 msgid "IPTV Lists"
 msgstr "Listas IPTV"
@@ -28,40 +30,54 @@ msgid "Radios"
 msgstr "Rádios"
 
 msgctxt "#32003"
-msgid "IMDB Movies"
-msgstr "IMDB Filmes"
+msgid "Trakt Movies"
+msgstr "Filmes Trakt"
 
 msgctxt "#32004"
-msgid "IMDB TV shows"
-msgstr "IMDB Séries"
+msgid "Trakt TV Shows"
+msgstr "Séries Trakt"
 
 msgctxt "#32005"
 msgid "Settings"
 msgstr "Configurações"
 
+# ── Menu Filmes ──────────────────────────────────────────────────────────────
+
 msgctxt "#32006"
 msgid "Search Movie"
-msgstr "Pesquisar Filme"
+msgstr "Buscar Filme"
 
 msgctxt "#32007"
-msgid "Top 250 Movies"
-msgstr "Top 250 Filmes"
-
-msgctxt "#32008"
 msgid "Popular Movies"
 msgstr "Filmes Populares"
 
+msgctxt "#32008"
+msgid "Trending Movies"
+msgstr "Filmes em Alta"
+
+msgctxt "#32066"
+msgid "Hot Movies"
+msgstr "Filmes Quentes"
+
+# ── Menu Séries ──────────────────────────────────────────────────────────────
+
 msgctxt "#32009"
-msgid "Search TV show"
-msgstr "Pesquisar Série"
+msgid "Search TV Show"
+msgstr "Buscar Série"
 
 msgctxt "#32010"
-msgid "Top 250 TV shows"
-msgstr "Top 250 Séries"
+msgid "Popular TV Shows"
+msgstr "Séries Populares"
 
 msgctxt "#32011"
-msgid "Popular TV shows"
-msgstr "Séries Populares"
+msgid "Trending TV Shows"
+msgstr "Séries em Alta"
+
+msgctxt "#32067"
+msgid "Hot TV Shows"
+msgstr "Séries Quentes"
+
+# ── Paginação & status ───────────────────────────────────────────────────────
 
 msgctxt "#32012"
 msgid "Next Page"
@@ -81,19 +97,19 @@ msgstr "Opção indisponível"
 
 msgctxt "#32016"
 msgid "Stream Unavailable"
-msgstr "Stream Indisponível"
+msgstr "Stream indisponível"
 
 msgctxt "#32017"
 msgid "No radios"
-msgstr "Nenhuma rádio"
+msgstr "Nenhuma rádio encontrada"
 
 msgctxt "#32018"
 msgid "No channels"
-msgstr "Nenhum canal"
+msgstr "Nenhum canal encontrado"
 
 msgctxt "#32020"
 msgid "Choose Portuguese audio in settings"
-msgstr "Escolha áudio em português nas configurações"
+msgstr "Escolha o áudio em Português nas configurações"
 
 msgctxt "#32021"
 msgid "Error: Invalid parameters"
@@ -115,6 +131,8 @@ msgctxt "#32029"
 msgid "IPTV Channel"
 msgstr "Canal IPTV"
 
+# ── Atualização automática ───────────────────────────────────────────────────
+
 msgctxt "#32023"
 msgid "Updating..."
 msgstr "Atualizando..."
@@ -129,29 +147,106 @@ msgstr "Erro na atualização automática"
 
 msgctxt "#32026"
 msgid "Update error"
-msgstr "Erro na atualização"
+msgstr "Erro de atualização"
 
-# Loading Dialog strings (32030-32031)
+# ── Loading dialog ───────────────────────────────────────────────────────────
+
 msgctxt "#32030"
 msgid "Searching at the source"
-msgstr "Procurando na fonte"
+msgstr "Buscando na fonte"
 
 msgctxt "#32031"
 msgid "Resolving the link"
 msgstr "Resolvendo o link"
 
-# Up Next Category (32100-32109)
+# ── Trakt — autenticação ─────────────────────────────────────────────────────
+
+# {0} = username
+msgctxt "#32044"
+msgid "Trakt: {0}"
+msgstr "Trakt: {0}"
+
+msgctxt "#32043"
+msgid "Connect to Trakt"
+msgstr "Conectar ao Trakt"
+
+msgctxt "#32045"
+msgid "Disconnect Trakt"
+msgstr "Desconectar do Trakt"
+
+# {0} = verification_url   {1} = user_code
+msgctxt "#32049"
+msgid "Open [B]{0}[/B] on any device and enter the code:[CR][B]{1}[/B]"
+msgstr "Acesse [B]{0}[/B] em qualquer dispositivo e insira o código:[CR][B]{1}[/B]"
+
+msgctxt "#32051"
+msgid "Waiting for authorization..."
+msgstr "Aguardando autorização..."
+
+# {0} = username
+msgctxt "#32052"
+msgid "Connected as {0}"
+msgstr "Conectado como {0}"
+
+msgctxt "#32053"
+msgid "Trakt connection failed"
+msgstr "Falha ao conectar ao Trakt"
+
+msgctxt "#32054"
+msgid "Disconnected from Trakt"
+msgstr "Desconectado do Trakt"
+
+msgctxt "#32065"
+msgid "Are you sure you want to disconnect your Trakt account?"
+msgstr "Tem certeza que deseja desconectar sua conta Trakt?"
+
+# ── Trakt — conteúdo autenticado ─────────────────────────────────────────────
+
+msgctxt "#32057"
+msgid "My Movie Watchlist"
+msgstr "Minha Lista de Filmes"
+
+msgctxt "#32058"
+msgid "My TV Show Watchlist"
+msgstr "Minha Lista de Séries"
+
+msgctxt "#32059"
+msgid "Recommended Movies"
+msgstr "Filmes Recomendados"
+
+msgctxt "#32060"
+msgid "Recommended TV Shows"
+msgstr "Séries Recomendadas"
+
+msgctxt "#32061"
+msgid "My Movie Ratings"
+msgstr "Filmes que Avaliei"
+
+msgctxt "#32062"
+msgid "My TV Show Ratings"
+msgstr "Séries que Avaliei"
+
+msgctxt "#32063"
+msgid "Watched Movies"
+msgstr "Filmes Assistidos"
+
+msgctxt "#32064"
+msgid "Watched TV Shows"
+msgstr "Séries Assistidas"
+
+# ── Up Next ──────────────────────────────────────────────────────────────────
+
 msgctxt "#32100"
 msgid "Up Next"
-msgstr ""
+msgstr "A Seguir"
 
 msgctxt "#32101"
 msgid "Enable Up Next"
-msgstr "Ativar Up Next"
+msgstr "Ativar A Seguir"
 
 msgctxt "#32102"
 msgid "Show notification when remaining (seconds)"
-msgstr "Mostrar notificação quando faltar (segundos)"
+msgstr "Mostrar notificação quando restar (segundos)"
 
 msgctxt "#32103"
 msgid "Countdown timer duration (seconds)"
@@ -169,13 +264,15 @@ msgctxt "#32109"
 msgid "Cancel"
 msgstr "Cancelar"
 
+# ── Skip Intro ───────────────────────────────────────────────────────────────
+
 msgctxt "#32110"
 msgid "Skip Intro"
-msgstr "Pular abertura"
+msgstr "Pular Abertura"
 
 msgctxt "#32111"
 msgid "Enable Skip Intro"
-msgstr "Ativar pular abertura"
+msgstr "Ativar Pular Abertura"
 
 msgctxt "#32113"
 msgid "Skip automatically (no confirmation)"
@@ -183,27 +280,29 @@ msgstr "Pular automaticamente (sem confirmação)"
 
 msgctxt "#32114"
 msgid "Countdown seconds"
-msgstr "Contagem regressiva em segundos"
+msgstr "Segundos de contagem"
 
 msgctxt "#32202"
-msgid "Skip Intro ({}s)"
-msgstr "Pular abertura ({}s)"
+msgid "Skip Intro ({0}s)"
+msgstr "Pular Abertura ({0}s)"
 
 msgctxt "#32205"
 msgid "INTRO"
-msgstr "Pular abertura"
+msgstr "ABERTURA"
+
+# ── Banco de dados ───────────────────────────────────────────────────────────
 
 msgctxt "#33000"
 msgid "Database"
-msgstr "Banco de dados"
+msgstr "Banco de Dados"
 
 msgctxt "#33001"
 msgid "Enable automatic cleanup"
 msgstr "Ativar limpeza automática"
 
 msgctxt "#33002"
-msgid "Set days to delete the database"
-msgstr "Defina os dias para excluir o banco de dados."
+msgid "Days before deleting the database"
+msgstr "Dias para excluir o banco de dados"
 
 msgctxt "#33003"
 msgid "Delete database"
@@ -211,4 +310,4 @@ msgstr "Excluir banco de dados"
 
 msgctxt "#33004"
 msgid "Are you sure you want to delete the database?"
-msgstr "Tem certeza de que deseja excluir o banco de dados?"
+msgstr "Tem certeza que deseja excluir o banco de dados?"

@@ -55,10 +55,6 @@ msgctxt "#32008"
 msgid "Trending Movies"
 msgstr ""
 
-msgctxt "#32066"
-msgid "Hot Movies"
-msgstr ""
-
 # ── Series menu ──────────────────────────────────────────────────────────────
 
 msgctxt "#32009"
@@ -71,10 +67,6 @@ msgstr ""
 
 msgctxt "#32011"
 msgid "Trending TV Shows"
-msgstr ""
-
-msgctxt "#32067"
-msgid "Hot TV Shows"
 msgstr ""
 
 # ── Pagination & status ──────────────────────────────────────────────────────
@@ -198,40 +190,6 @@ msgstr ""
 
 msgctxt "#32065"
 msgid "Are you sure you want to disconnect your Trakt account?"
-msgstr ""
-
-# ── Trakt — authenticated content ────────────────────────────────────────────
-
-msgctxt "#32057"
-msgid "My Movie Watchlist"
-msgstr ""
-
-msgctxt "#32058"
-msgid "My TV Show Watchlist"
-msgstr ""
-
-msgctxt "#32059"
-msgid "Recommended Movies"
-msgstr ""
-
-msgctxt "#32060"
-msgid "Recommended TV Shows"
-msgstr ""
-
-msgctxt "#32061"
-msgid "My Movie Ratings"
-msgstr ""
-
-msgctxt "#32062"
-msgid "My TV Show Ratings"
-msgstr ""
-
-msgctxt "#32063"
-msgid "Watched Movies"
-msgstr ""
-
-msgctxt "#32064"
-msgid "Watched TV Shows"
 msgstr ""
 
 # ── Up Next ──────────────────────────────────────────────────────────────────

@@ -55,10 +55,6 @@ msgctxt "#32008"
 msgid "Trending Movies"
 msgstr "Filmes em Alta"
 
-msgctxt "#32066"
-msgid "Hot Movies"
-msgstr "Filmes Quentes"
-
 # ── Menu Séries ──────────────────────────────────────────────────────────────
 
 msgctxt "#32009"
@@ -72,10 +68,6 @@ msgstr "Séries Populares"
 msgctxt "#32011"
 msgid "Trending TV Shows"
 msgstr "Séries em Alta"
-
-msgctxt "#32067"
-msgid "Hot TV Shows"
-msgstr "Séries Quentes"
 
 # ── Paginação & status ───────────────────────────────────────────────────────
 
@@ -158,81 +150,6 @@ msgstr "Buscando na fonte"
 msgctxt "#32031"
 msgid "Resolving the link"
 msgstr "Resolvendo o link"
-
-# ── Trakt — autenticação ─────────────────────────────────────────────────────
-
-# {0} = username
-msgctxt "#32044"
-msgid "Trakt: {0}"
-msgstr "Trakt: {0}"
-
-msgctxt "#32043"
-msgid "Connect to Trakt"
-msgstr "Conectar ao Trakt"
-
-msgctxt "#32045"
-msgid "Disconnect Trakt"
-msgstr "Desconectar do Trakt"
-
-# {0} = verification_url   {1} = user_code
-msgctxt "#32049"
-msgid "Open [B]{0}[/B] on any device and enter the code:[CR][B]{1}[/B]"
-msgstr "Acesse [B]{0}[/B] em qualquer dispositivo e insira o código:[CR][B]{1}[/B]"
-
-msgctxt "#32051"
-msgid "Waiting for authorization..."
-msgstr "Aguardando autorização..."
-
-# {0} = username
-msgctxt "#32052"
-msgid "Connected as {0}"
-msgstr "Conectado como {0}"
-
-msgctxt "#32053"
-msgid "Trakt connection failed"
-msgstr "Falha ao conectar ao Trakt"
-
-msgctxt "#32054"
-msgid "Disconnected from Trakt"
-msgstr "Desconectado do Trakt"
-
-msgctxt "#32065"
-msgid "Are you sure you want to disconnect your Trakt account?"
-msgstr "Tem certeza que deseja desconectar sua conta Trakt?"
-
-# ── Trakt — conteúdo autenticado ─────────────────────────────────────────────
-
-msgctxt "#32057"
-msgid "My Movie Watchlist"
-msgstr "Minha Lista de Filmes"
-
-msgctxt "#32058"
-msgid "My TV Show Watchlist"
-msgstr "Minha Lista de Séries"
-
-msgctxt "#32059"
-msgid "Recommended Movies"
-msgstr "Filmes Recomendados"
-
-msgctxt "#32060"
-msgid "Recommended TV Shows"
-msgstr "Séries Recomendadas"
-
-msgctxt "#32061"
-msgid "My Movie Ratings"
-msgstr "Filmes que Avaliei"
-
-msgctxt "#32062"
-msgid "My TV Show Ratings"
-msgstr "Séries que Avaliei"
-
-msgctxt "#32063"
-msgid "Watched Movies"
-msgstr "Filmes Assistidos"
-
-msgctxt "#32064"
-msgid "Watched TV Shows"
-msgstr "Séries Assistidas"
 
 # ── Up Next ──────────────────────────────────────────────────────────────────
 

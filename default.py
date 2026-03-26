@@ -96,12 +96,12 @@ IPTV_PROBLEM_LOG = translate(os.path.join(profile, 'iptv_problems_log.txt'))
 # ═══════════════════════════════════════════════════════════════════════════
 
 def _movie_item(m):
-    name, img, _url, desc, imdb_id, original_name, year = m
+    name, img, _url, desc, imdb_id, original_name, year, fanart = m
     return {
         'name':          '{} ({})'.format(name, year) if year and year != '0' else name,
         'description':   desc,
         'iconimage':     img,
-        'fanart':        img,
+        'fanart':        fanart or img,
         'imdbnumber':    imdb_id,
         'movie_name':    name,
         'original_name': original_name,
@@ -111,11 +111,12 @@ def _movie_item(m):
 
 
 def _serie_item(s):
-    name, img, slug, desc, imdb_id, original_name, year = s
+    name, img, slug, desc, imdb_id, original_name, year, fanart = s
     return {
         'name':          '{} ({})'.format(name, year) if year and year != '0' else name,
         'description':   desc,
         'iconimage':     img,
+        'fanart':        fanart or img,
         'url':           slug,
         'imdbnumber':    imdb_id,
         'serie_name':    name,
@@ -569,6 +570,7 @@ def trakt_history_series(param=None):
 @route('/open_seasons')
 def open_seasons(param):
     serie_icon    = param.get('iconimage', '')
+    serie_fanart  = param.get('fanart', '') or serie_icon
     serie_name    = param.get('serie_name', param.get('name', ''))
     original_name = param.get('original_name', '')
     url           = param.get('url', '')
@@ -581,8 +583,9 @@ def open_seasons(param):
     for season_num, label, season_ref in items:
         addMenuItem({
             'name': label, 'description': '', 'iconimage': serie_icon,
-            'url': season_ref, 'imdbnumber': imdb_id, 'season': season_num,
-            'serie_name': serie_name, 'original_name': original_name,
+            'fanart': serie_fanart, 'url': season_ref, 'imdbnumber': imdb_id,
+            'season': season_num, 'serie_name': serie_name,
+            'original_name': original_name,
         }, destiny='/open_episodes')
     end()
     setview('List')

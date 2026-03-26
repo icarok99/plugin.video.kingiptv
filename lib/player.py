@@ -12,7 +12,7 @@ class KingPlayer(xbmc.Player):
 
     def __init__(self):
         super(KingPlayer, self).__init__()
-        self.imdb_id = None
+        self.slug = None
         self.season = None
         self.episode = None
         self._state_lock = threading.Lock()
@@ -21,7 +21,7 @@ class KingPlayer(xbmc.Player):
         self._skip_service = SkipService(db)
         self._upnext_service = UpNextService(db)
 
-    def start_monitoring(self, imdb_id, season, episode):
+    def start_monitoring(self, slug, season, episode):
         with self._state_lock:
             self._monitoring = False
 
@@ -29,27 +29,27 @@ class KingPlayer(xbmc.Player):
             self._monitor_thread.join(timeout=3.0)
 
         with self._state_lock:
-            self.imdb_id = imdb_id
+            self.slug = slug
             self.season = season
             self.episode = episode
             self._monitoring = True
 
         self._monitor_thread = threading.Thread(
             target=self._monitoring_loop,
-            args=(imdb_id, season, episode),
+            args=(slug, season, episode),
             daemon=True,
         )
         self._monitor_thread.start()
 
     def mark_skip_point(self, point):
         with self._state_lock:
-            imdb_id = self.imdb_id
+            slug = self.slug
             season = self.season
             episode = self.episode
-        if imdb_id and season is not None and episode is not None:
-            self._skip_service.save_skip_point(imdb_id, season, episode, point)
+        if slug and season is not None and episode is not None:
+            self._skip_service.save_skip_point(slug, season, episode, point)
 
-    def _monitoring_loop(self, imdb_id, season, episode):
+    def _monitoring_loop(self, slug, season, episode):
         monitor = xbmc.Monitor()
 
         waited = 0
@@ -82,12 +82,12 @@ class KingPlayer(xbmc.Player):
                 self._monitoring = False
             return
 
-        skip_data = self._skip_service.load(imdb_id, season, episode)
-        next_info = self._upnext_service.load(imdb_id, season, episode)
+        skip_data = self._skip_service.load(slug, season, episode)
+        next_info = self._upnext_service.load(slug, season, episode)
 
         threading.Thread(
             target=self._skip_service.prefetch_season,
-            args=(imdb_id, season),
+            args=(slug, season),
             daemon=True,
         ).start()
 
@@ -141,7 +141,7 @@ class KingPlayer(xbmc.Player):
                     self._upnext_service._watched_marked = True
                 threading.Thread(
                     target=db.mark_watched,
-                    args=(imdb_id, season, episode),
+                    args=(slug, season, episode),
                     daemon=True,
                 ).start()
 
@@ -163,25 +163,25 @@ class KingPlayer(xbmc.Player):
         with self._state_lock:
             self._monitoring = False
             self._upnext_service._watched_marked = False
-            self.imdb_id = None
+            self.slug = None
             self.season = None
             self.episode = None
 
     def onPlayBackEnded(self):
         with self._state_lock:
-            imdb_id = self.imdb_id
+            slug = self.slug
             season = self.season
             episode = self.episode
             already_marked = self._upnext_service._watched_marked
             self._monitoring = False
             self._upnext_service._watched_marked = False
-            self.imdb_id = None
+            self.slug = None
             self.season = None
             self.episode = None
-        if imdb_id and season is not None and episode is not None and not already_marked:
+        if slug and season is not None and episode is not None and not already_marked:
             threading.Thread(
                 target=db.mark_watched,
-                args=(imdb_id, season, episode),
+                args=(slug, season, episode),
                 daemon=True,
             ).start()
 

@@ -148,7 +148,7 @@ class UpNextService:
             except Exception:
                 return default
 
-    def load(self, imdb_id, season, episode):
+    def load(self, slug, season, episode):
         if not self.enabled:
             return None
         self._watched_marked = False
@@ -157,18 +157,18 @@ class UpNextService:
         if playlist.size() > 0 and playlist.getposition() < (playlist.size() - 1):
             next_info = self._get_next_from_playlist()
         if not next_info or not next_info.get('next_season'):
-            meta = self.db.get_next_episode_metadata(imdb_id, season, episode)
+            meta = self.db.get_next_episode_metadata(slug, season, episode)
             if meta:
                 next_info = {
-                    'imdb_id': imdb_id,
-                    'serie_name': meta.get('serie_name', ''),
+                    'slug':          slug,
+                    'serie_name':    meta.get('serie_name', ''),
                     'original_name': meta.get('original_name', ''),
-                    'next_season': meta.get('season'),
-                    'next_episode': meta.get('episode'),
+                    'next_season':   meta.get('season'),
+                    'next_episode':  meta.get('episode'),
                     'episode_title': meta.get('episode_title', ''),
-                    'thumbnail': meta.get('thumbnail', ''),
-                    'fanart': meta.get('fanart', ''),
-                    'description': meta.get('description', ''),
+                    'thumbnail':     meta.get('thumbnail', ''),
+                    'fanart':        meta.get('fanart', ''),
+                    'description':   meta.get('description', ''),
                 }
         return next_info
 

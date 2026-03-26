@@ -643,7 +643,7 @@ def play_resolve_movies(param):
     year          = param.get('year', '')
     original_name = param.get('original_name', '')
 
-    loading_manager.show()
+    loading_manager.show(fanart_path=fanart or None)
     try:
         result = api_vod.VOD().movie(imdb_number)
         if not result:
@@ -712,7 +712,7 @@ def play_resolve_series(param):
     if ep_num <= 0 or season_num <= 0:
         notify(getString(32022)); return
 
-    loading_manager.show()
+    loading_manager.show(fanart_path=fanart or None)
     try:
         result = api_vod.VOD().tvshows(imdb_number, season_num, ep_num)
         if not result:

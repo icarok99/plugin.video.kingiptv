@@ -18,6 +18,7 @@ except Exception:
         cfscraper = None
         USER_AGENT = 'Mozilla/5.0 (Kodi Addon)'
 
+
 def _parse_iso_datetime(s):
     if not s:
         return None
@@ -62,6 +63,14 @@ def playlist_pluto():
         to_str = to_utc.strftime('%Y-%m-%dT%H:%M:%SZ')
 
         url = f'https://api.pluto.tv/v2/channels?start={from_str}&stop={to_str}'
+        try:
+            r = requests.get(f'https://boot.pluto.tv/v4/start?appName=web&appVersion=9.19.0-7a6c115631d945c4f7327de3e03b7c474b692657&deviceVersion=148.0.0&deviceModel=web&deviceMake=firefox&deviceType=web&clientID=df8c4848-8b94-4323-9ca6-d0b802a9589c&clientModelNumber=1.0.0&channelSlug=5f120e94a5714d00074576a1&serverSideAds=false&drmCapabilities=widevine%3AL3&blockingMode=&notificationVersion=1&appLaunchCount=0&lastAppLaunchDate={from_str}&clientTime={to_str}', headers={'User-Agent': USER_AGENT}, timeout=10)
+            data_api = r.json()
+            session_token = data_api.get('sessionToken', '')
+            params = data_api.get('stitcherParams', '')
+        except:
+            params = ''
+            session_token = ''
         if cfscraper:
             channels = cfscraper.get(url).json()
         else:
@@ -81,17 +90,25 @@ def playlist_pluto():
             if stitched_urls:
                 stream_url = stitched_urls[0].get('url')
                 if stream_url:
-                    stream_url = stream_url.replace('&deviceMake=', '&deviceMake=Firefox')
-                    stream_url = stream_url.replace('&deviceType=', '&deviceType=web')
-                    stream_url = stream_url.replace('&deviceId=unknown', f'&deviceId={deviceid}')
-                    stream_url = stream_url.replace('&deviceModel=', '&deviceModel=web')
-                    stream_url = stream_url.replace('&deviceVersion=unknown', '&deviceVersion=82.0')
-                    stream_url = stream_url.replace('&appName=&', '&appName=web&')
-                    stream_url = stream_url.replace('&appVersion=&', '&appVersion=5.9.1-e0b37ef76504d23c6bdc8157813d13333dfa33a3')
-                    stream_url = stream_url.replace('&sid=', f'&sid={deviceid}&sessionID={deviceid}')
-                    stream_url = stream_url.replace('&deviceDNT=0', '&deviceDNT=false')
-                    stream_url = f"{stream_url}&serverSideAds=false&terminate=false&clientDeviceType=0&clientModelNumber=na&clientID={deviceid}"
-                    stream_url = stream_url + '|User-Agent=' + quote_plus(USER_AGENT)
+                    try:
+                        #slui = stream_url.split("/channel/")[1].split("/")[0]
+                        stream_url = stream_url.split('?')[0].replace("/stitch/hls/", "/v2/stitch/hls/")
+                        stream_url = f"{stream_url}?{params}&jwt={session_token}&masterJWTPassthrough=true&includeExtendedEvents=true&eventVOD=false&CMCD=mtp=1000,ot=m,sf=h"
+                        stream_url = stream_url + '|User-Agent=' + quote_plus(USER_AGENT)
+                    except:
+                        pass
+
+                    # stream_url = stream_url.replace('&deviceMake=', '&deviceMake=Firefox')
+                    # stream_url = stream_url.replace('&deviceType=', '&deviceType=web')
+                    # stream_url = stream_url.replace('&deviceId=unknown', f'&deviceId={deviceid}')
+                    # stream_url = stream_url.replace('&deviceModel=', '&deviceModel=web')
+                    # stream_url = stream_url.replace('&deviceVersion=unknown', '&deviceVersion=82.0')
+                    # stream_url = stream_url.replace('&appName=&', '&appName=web&')
+                    # stream_url = stream_url.replace('&appVersion=&', '&appVersion=5.9.1-e0b37ef76504d23c6bdc8157813d13333dfa33a3')
+                    # stream_url = stream_url.replace('&sid=', f'&sid={deviceid}&sessionID={deviceid}')
+                    # stream_url = stream_url.replace('&deviceDNT=0', '&deviceDNT=false')
+                    # stream_url = f"{stream_url}&serverSideAds=false&terminate=false&clientDeviceType=0&clientModelNumber=na&clientID={deviceid}"
+                    # stream_url = stream_url + '|User-Agent=' + quote_plus(USER_AGENT)
 
             timelines = channel.get('timelines', [])
             current_program = None
@@ -141,3 +158,4 @@ def playlist_pluto():
         raise
 
     return channels_kodi
+

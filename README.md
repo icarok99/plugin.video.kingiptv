@@ -57,13 +57,14 @@ Caso prefira instalar manualmente, será necessário instalar as dependências a
 
 ### Dependências (instalar nesta ordem)
 
-- [script.module.netunblock](https://github.com/icarok99/oneplayhd.github.io/raw/refs/heads/master/script.module.netunblock/script.module.netunblock-0.0.2.zip)
-- [script.module.flask](https://github.com/icarok99/oneplayhd.github.io/raw/refs/heads/master/script.module.flask/script.module.flask-2.1.3.zip)
-- [plugin.video.f4mTester](https://github.com/icarok99/oneplayhd.github.io/raw/refs/heads/master/plugin.video.f4mTester/plugin.video.f4mTester-4.2.5.zip)
+- [script.module.netunblock](https://github.com/icarok99-alt/oneplayhd.github.io/raw/refs/heads/master/script.module.netunblock/script.module.netunblock-0.0.2.zip)
+- [script.module.flask](https://github.com/icarok99-alt/oneplayhd.github.io/raw/refs/heads/master/script.module.flask/script.module.flask-2.1.3.zip)
+- [plugin.video.f4mTester](https://github.com/icarok99-alt/oneplayhd.github.io/raw/refs/heads/master/plugin.video.f4mTester/plugin.video.f4mTester-4.2.5.zip)
+- [script.module.aws-solver](https://github.com/icarok99-alt/oneplayhd.github.io/raw/refs/heads/master/script.module.aws-solver/script.module.aws-solver-1.0.0.zip)
 
 Após instalar todas as dependências, baixe e instale a versão mais recente do add-on:
 
-[plugin.video.kingiptv](https://github.com/icarok99/plugin.video.kingiptv/releases/latest)
+[plugin.video.kingiptv](https://github.com/icarok99-alt/plugin.video.kingiptv/releases/latest)
 
 A instalação é feita em:
 

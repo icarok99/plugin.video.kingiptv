@@ -66,7 +66,7 @@ class KingDatabase:
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS watched_episodes (
                     imdb_id TEXT NOT NULL,
-                    season  INTEGER NOT NULL,
+                    season INTEGER NOT NULL,
                     episode INTEGER NOT NULL,
                     watched_at TEXT,
                     PRIMARY KEY (imdb_id, season, episode)
@@ -76,13 +76,13 @@ class KingDatabase:
 
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS skip_timestamps (
-                    imdb_id     TEXT    NOT NULL,
-                    season      INTEGER NOT NULL,
-                    episode     INTEGER NOT NULL,
+                    imdb_id TEXT NOT NULL,
+                    season INTEGER NOT NULL,
+                    episode INTEGER NOT NULL,
                     intro_start REAL,
-                    intro_end   REAL,
-                    source      TEXT    DEFAULT 'introhater',
-                    updated_at  TEXT,
+                    intro_end REAL,
+                    source TEXT DEFAULT 'introhater',
+                    updated_at TEXT,
                     PRIMARY KEY (imdb_id, season, episode)
                 )
             ''')
@@ -260,40 +260,30 @@ class KingDatabase:
             if source == 'manual':
                 cursor.execute('''
                     INSERT INTO skip_timestamps
-                        (imdb_id, season, episode,
-                         intro_start, intro_end,
-                         source, updated_at)
+                        (imdb_id, season, episode, intro_start, intro_end, source, updated_at)
                     VALUES (?, ?, ?, ?, ?, 'manual', ?)
                     ON CONFLICT(imdb_id, season, episode)
                     DO UPDATE SET
                         intro_start = COALESCE(excluded.intro_start, intro_start),
-                        intro_end   = COALESCE(excluded.intro_end,   intro_end),
-                        source      = 'manual',
-                        updated_at  = excluded.updated_at
-                ''', (
-                    imdb_id, int(season), int(episode),
-                    intro_start, intro_end, now,
-                ))
+                        intro_end = COALESCE(excluded.intro_end, intro_end),
+                        source = 'manual',
+                        updated_at = excluded.updated_at
+                ''', (imdb_id, int(season), int(episode), intro_start, intro_end, now))
             else:
                 cursor.execute('''
                     INSERT INTO skip_timestamps
-                        (imdb_id, season, episode,
-                         intro_start, intro_end,
-                         source, updated_at)
+                        (imdb_id, season, episode, intro_start, intro_end, source, updated_at)
                     VALUES (?, ?, ?, ?, ?, 'introhater', ?)
                     ON CONFLICT(imdb_id, season, episode)
                     DO UPDATE SET
                         intro_start = CASE WHEN source = 'manual' THEN intro_start
-                                          ELSE COALESCE(excluded.intro_start, intro_start) END,
-                        intro_end   = CASE WHEN source = 'manual' THEN intro_end
-                                          ELSE COALESCE(excluded.intro_end,   intro_end)   END,
-                        source      = CASE WHEN source = 'manual' THEN 'manual' ELSE 'introhater' END,
-                        updated_at  = CASE WHEN source = 'manual' THEN updated_at
-                                          ELSE excluded.updated_at END
-                ''', (
-                    imdb_id, int(season), int(episode),
-                    intro_start, intro_end, now,
-                ))
+                                     ELSE COALESCE(excluded.intro_start, intro_start) END,
+                        intro_end = CASE WHEN source = 'manual' THEN intro_end
+                                    ELSE COALESCE(excluded.intro_end, intro_end) END,
+                        source = CASE WHEN source = 'manual' THEN 'manual' ELSE 'introhater' END,
+                        updated_at = CASE WHEN source = 'manual' THEN updated_at
+                                     ELSE excluded.updated_at END
+                ''', (imdb_id, int(season), int(episode), intro_start, intro_end, now))
 
     def skip_timestamps_checked(self, imdb_id, season, episode):
         with self._get_connection() as conn:
@@ -307,15 +297,15 @@ class KingDatabase:
     def save_skip_timestamps_batch(self, imdb_id, season, episodes_data, source='introhater'):
         if not episodes_data:
             return 0
-        
+
         now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         batch_data = []
-        
+
         for ep_data in episodes_data:
             episode = int(ep_data.get('episode', 0))
             if episode <= 0:
                 continue
-                
+
             batch_data.append((
                 imdb_id,
                 int(season),
@@ -324,43 +314,39 @@ class KingDatabase:
                 ep_data.get('intro_end'),
                 now
             ))
-        
+
         if not batch_data:
             return 0
-        
+
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            
+
             if source == 'manual':
                 cursor.executemany('''
                     INSERT INTO skip_timestamps
-                        (imdb_id, season, episode,
-                         intro_start, intro_end,
-                         source, updated_at)
+                        (imdb_id, season, episode, intro_start, intro_end, source, updated_at)
                     VALUES (?, ?, ?, ?, ?, 'manual', ?)
                     ON CONFLICT(imdb_id, season, episode)
                     DO UPDATE SET
                         intro_start = COALESCE(excluded.intro_start, intro_start),
-                        intro_end   = COALESCE(excluded.intro_end,   intro_end),
-                        source      = 'manual',
-                        updated_at  = excluded.updated_at
+                        intro_end = COALESCE(excluded.intro_end, intro_end),
+                        source = 'manual',
+                        updated_at = excluded.updated_at
                 ''', batch_data)
             else:
                 cursor.executemany('''
                     INSERT INTO skip_timestamps
-                        (imdb_id, season, episode,
-                         intro_start, intro_end,
-                         source, updated_at)
+                        (imdb_id, season, episode, intro_start, intro_end, source, updated_at)
                     VALUES (?, ?, ?, ?, ?, 'introhater', ?)
                     ON CONFLICT(imdb_id, season, episode)
                     DO UPDATE SET
                         intro_start = CASE WHEN source = 'manual' THEN intro_start
-                                          ELSE COALESCE(excluded.intro_start, intro_start) END,
-                        intro_end   = CASE WHEN source = 'manual' THEN intro_end
-                                          ELSE COALESCE(excluded.intro_end,   intro_end)   END,
-                        source      = CASE WHEN source = 'manual' THEN 'manual' ELSE 'introhater' END,
-                        updated_at  = CASE WHEN source = 'manual' THEN updated_at
-                                          ELSE excluded.updated_at END
+                                     ELSE COALESCE(excluded.intro_start, intro_start) END,
+                        intro_end = CASE WHEN source = 'manual' THEN intro_end
+                                    ELSE COALESCE(excluded.intro_end, intro_end) END,
+                        source = CASE WHEN source = 'manual' THEN 'manual' ELSE 'introhater' END,
+                        updated_at = CASE WHEN source = 'manual' THEN updated_at
+                                     ELSE excluded.updated_at END
                 ''', batch_data)
-        
+
         return len(batch_data)

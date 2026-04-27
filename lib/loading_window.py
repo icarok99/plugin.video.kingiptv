@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import xbmc
 import xbmcgui
 import xbmcaddon
@@ -38,7 +40,7 @@ class _PlaybackMonitor(xbmc.Player):
             try:
                 if self.isPlaying() and self.getTime() > 0:
                     return True
-            except:
+            except Exception:
                 pass
             if monitor.waitForAbort(interval):
                 return False
@@ -48,75 +50,75 @@ class _PlaybackMonitor(xbmc.Player):
 
 
 class LoadingWindow(xbmcgui.WindowXMLDialog):
-    
+
     PROGRESS_CONTROL = 100
-    
+
     def __init__(self, *args, **kwargs):
         self.progress = 0
         self.closing = False
         self._progress_thread = None
         self._controls_ready = False
-        
+
     def onInit(self):
         try:
             self._controls_ready = True
             xbmcgui.Window(10000).clearProperty('loading.phase2')
             self.start_progress_animation()
-        except Exception as e:
+        except Exception:
             pass
-    
+
     def start_progress_animation(self):
         if self._progress_thread is None or not self._progress_thread.is_alive():
             self.closing = False
             self._progress_thread = threading.Thread(target=self._animate_progress)
             self._progress_thread.daemon = True
             self._progress_thread.start()
-    
+
     def _animate_progress(self):
         try:
             while not self.closing:
                 for i in range(0, 101, 2):
                     if self.closing:
                         break
-                    
+
                     if self._controls_ready:
                         try:
                             self.getControl(self.PROGRESS_CONTROL).setPercent(i)
-                        except:
+                        except Exception:
                             pass
-                    
+
                     xbmcgui.Window(10000).setProperty('loading.progress', str(i))
                     time.sleep(0.05)
-                
+
                 if not self.closing:
                     time.sleep(0.2)
-        except Exception as e:
+        except Exception:
             pass
-    
+
     def set_phase2(self):
         try:
             xbmcgui.Window(10000).setProperty('loading.phase2', 'true')
-        except Exception as e:
+        except Exception:
             pass
-    
+
     def close_dialog(self):
         try:
             self.closing = True
-            
+
             if self._progress_thread and self._progress_thread.is_alive():
                 self._progress_thread.join(timeout=1.0)
-            
+
             xbmcgui.Window(10000).clearProperty('loading.phase2')
             xbmcgui.Window(10000).clearProperty('loading.progress')
             xbmcgui.Window(10000).clearProperty('loading.fanart')
-            
+
             self.close()
-        except Exception as e:
+        except Exception:
             pass
 
 
 class LoadingManager:
-    
+
     def __init__(self):
         self.window = None
         self._lock = threading.Lock()
@@ -125,13 +127,13 @@ class LoadingManager:
         self._busy_suppress_thread = None
         self._suppress_busy = False
         self._player_monitor = _PlaybackMonitor()
-    
+
     def _run_busy_suppressor(self):
         while self._suppress_busy:
             try:
                 xbmc.executebuiltin('Dialog.Close(busydialog,true)')
                 xbmc.executebuiltin('Dialog.Close(busydialognocancel,true)')
-            except:
+            except Exception:
                 pass
             xbmc.sleep(100)
 
@@ -141,24 +143,24 @@ class LoadingManager:
                 if self.window:
                     try:
                         self.window.close_dialog()
-                    except:
+                    except Exception:
                         pass
                     self.window = None
-                
+
                 addon = xbmcaddon.Addon()
                 addon_path = addon.getAddonInfo('path')
-                
+
                 if fanart_path is None:
                     fanart_path = os.path.join(addon_path, 'resources', 'skins', 'Default', 'media', 'fanart.jpg')
-                
+
                 xbmcgui.Window(10000).setProperty('loading.fanart', fanart_path)
-                
+
                 self._should_close = False
                 self._suppress_busy = True
                 self._busy_suppress_thread = threading.Thread(target=self._run_busy_suppressor)
                 self._busy_suppress_thread.daemon = True
                 self._busy_suppress_thread.start()
-                
+
                 self.window = LoadingWindow(
                     'DialogLoadingKing.xml',
                     addon_path,
@@ -167,17 +169,17 @@ class LoadingManager:
                 )
                 self.window.show()
                 xbmc.sleep(100)
-                
-            except Exception as e:
+
+            except Exception:
                 pass
-    
+
     def set_phase2(self):
         if self.window:
             try:
                 self.window.set_phase2()
-            except Exception as e:
+            except Exception:
                 pass
-    
+
     def close(self):
         if self.window:
             self._should_close = True
@@ -195,7 +197,7 @@ class LoadingManager:
                     self._suppress_busy = False
                     self.window.close_dialog()
                     self.window = None
-                except Exception as e:
+                except Exception:
                     pass
 
     def force_close(self):
@@ -206,7 +208,7 @@ class LoadingManager:
                 try:
                     self.window.close_dialog()
                     self.window = None
-                except Exception as e:
+                except Exception:
                     pass
 
 

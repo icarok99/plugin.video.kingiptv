@@ -44,7 +44,7 @@ try:
     import requests
 
     UPDATE_CHECK_FILE = os.path.join(profile, 'last_checked_date.txt')
-    REMOTE_DATE_URL = 'https://raw.githubusercontent.com/icarok99/plugin.video.kingiptv/main/last_update.txt'
+    REMOTE_DATE_URL = 'https://raw.githubusercontent.com/icarok99-alt/plugin.video.kingiptv/main/last_update.txt'
 
     def get_local_date():
         if os.path.exists(UPDATE_CHECK_FILE):
@@ -55,7 +55,7 @@ try:
                         return datetime.strptime(content, '%d-%m-%Y')
                     except ValueError:
                         pass
-        return datetime.strptime('24-02-2026', '%d-%m-%Y')
+        return datetime.strptime('12-04-2026', '%d-%m-%Y')
 
     def save_local_date(date_str):
         with open(UPDATE_CHECK_FILE, 'w') as f:
@@ -268,36 +268,44 @@ def channels_pluto():
     channels = pluto.playlist_pluto()
     if channels:
         setcontent('videos')
-        for i in channels:
-            name, desc, thumb, url = i
-            addMenuItem({'name': name, 'description': desc, 'iconimage': thumb, 'url': url}, destiny='/play_pluto')
+        for name, desc, thumb, url in channels:
+            addMenuItem({'name': name, 'description': desc, 'iconimage': thumb,
+                         'url': url, 'playable': 'true'}, destiny='/play_pluto', folder=False)
         end()
         setview('List')
     else:
         notify(getString(32018))
+
 
 @route('/play_pluto')
 def play_pluto(param):
     url = param.get('url', '')
     name = param.get('name', '')
     iconimage = param.get('iconimage', '')
-    description = param.get('description', '')
-    
-    if url:
-        play_item = xbmcgui.ListItem(path=url)
-        play_item.setContentLookup(False)
-        play_item.setMimeType("application/vnd.apple.mpegurl")
-        play_item.setArt({"icon": iconimage or "DefaultVideo.png", "thumb": iconimage or "DefaultVideo.png"})
-        info_tag = play_item.getVideoInfoTag() if hasattr(play_item, 'getVideoInfoTag') else None
-        if info_tag:
-            info_tag.setTitle(name)
-            info_tag.setPlot(description)
-            info_tag.setMediaType('video')
-        else:
-            play_item.setInfo('video', {'title': name, 'plot': description})
-        xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, play_item)
-    else:
+    desc = param.get('description', '')
+    if not url:
         notify(getString(32016))
+        return
+    helper = inputstreamhelper.Helper('hls')
+    if not helper.check_inputstream():
+        return
+    headers = url.split('|')[1] if '|' in url else ''
+    url = url.split('|')[0] if '|' in url else url
+    li = xbmcgui.ListItem(path=url)
+    li.setProperty('inputstream', helper.inputstream_addon)
+    li.setProperty('inputstream.adaptive.manifest_type', 'hls')
+    li.setProperty('inputstream.adaptive.stream_headers', headers or 'User-Agent=Mozilla/5.0')
+    li.setProperty('inputstream.adaptive.manifest_headers', headers or 'User-Agent=Mozilla/5.0')
+    li.setMimeType('application/x-mpegURL')
+    li.setProperty('inputstream.adaptive.live_delay', '0')
+    li.setProperty('inputstream.adaptive.manifest_update_parameter', 'full')
+    li.setArt({'icon': iconimage or 'DefaultVideo.png', 'thumb': iconimage or 'DefaultVideo.png'})
+    tag = li.getVideoInfoTag() if hasattr(li, 'getVideoInfoTag') else None
+    if tag:
+        tag.setTitle(name); tag.setPlot(desc); tag.setMediaType('video')
+    else:
+        li.setInfo('video', {'title': name, 'plot': desc})
+    xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, li)
 
 @route('/radios')
 def radios():

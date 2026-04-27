@@ -20,6 +20,9 @@ class KingPlayer(xbmc.Player):
         self._monitor_thread = None
         self._skip_service = SkipService(db)
         self._upnext_service = UpNextService(db)
+        self._last_time = 0.0
+        self._total_time = 0.0
+        self._watched_marked = False
 
     def start_monitoring(self, imdb_id, season, episode):
         with self._state_lock:
@@ -33,6 +36,9 @@ class KingPlayer(xbmc.Player):
             self.season = season
             self.episode = episode
             self._monitoring = True
+            self._last_time = 0.0
+            self._total_time = 0.0
+            self._watched_marked = False
 
         self._monitor_thread = threading.Thread(
             target=self._monitoring_loop,
@@ -82,6 +88,9 @@ class KingPlayer(xbmc.Player):
                 self._monitoring = False
             return
 
+        with self._state_lock:
+            self._total_time = total_time
+
         skip_data = self._skip_service.load(imdb_id, season, episode)
         next_info = self._upnext_service.load(imdb_id, season, episode)
 
@@ -96,7 +105,7 @@ class KingPlayer(xbmc.Player):
             total_time * 0.9,
             total_time - self._upnext_service.trigger_seconds - 30
         )
-        watched_marked = False
+
         skip_shown = False
         upnext_shown = False
 
@@ -115,6 +124,9 @@ class KingPlayer(xbmc.Player):
             except Exception:
                 monitor.waitForAbort(0.5)
                 continue
+
+            with self._state_lock:
+                self._last_time = ct
 
             if not skip_shown and intro_start is not None and intro_end is not None:
                 if (intro_start - self._skip_service.tolerance) <= ct <= intro_end:
@@ -135,9 +147,9 @@ class KingPlayer(xbmc.Player):
                 monitor.waitForAbort(0.5)
                 continue
 
-            if not watched_marked and ct >= watched_at:
-                watched_marked = True
+            if not self._watched_marked and ct >= watched_at:
                 with self._state_lock:
+                    self._watched_marked = True
                     self._upnext_service._watched_marked = True
                 threading.Thread(
                     target=db.mark_watched,
@@ -162,28 +174,36 @@ class KingPlayer(xbmc.Player):
     def _on_stop(self):
         with self._state_lock:
             self._monitoring = False
-            self._upnext_service._watched_marked = False
-            self.imdb_id = None
-            self.season = None
-            self.episode = None
-
-    def onPlayBackEnded(self):
-        with self._state_lock:
             imdb_id = self.imdb_id
             season = self.season
             episode = self.episode
-            already_marked = self._upnext_service._watched_marked
-            self._monitoring = False
-            self._upnext_service._watched_marked = False
+            already_marked = self._watched_marked
+            last_time = self._last_time
+            total_time = self._total_time
+
+            self._watched_marked = False
+            if hasattr(self._upnext_service, '_watched_marked'):
+                self._upnext_service._watched_marked = False
             self.imdb_id = None
             self.season = None
             self.episode = None
-        if imdb_id and season is not None and episode is not None and not already_marked:
+            self._last_time = 0.0
+            self._total_time = 0.0
+
+        if (
+            imdb_id and season is not None and episode is not None
+            and not already_marked
+            and total_time > 60
+            and last_time >= total_time * 0.9
+        ):
             threading.Thread(
                 target=db.mark_watched,
                 args=(imdb_id, season, episode),
                 daemon=True,
             ).start()
+
+    def onPlayBackEnded(self):
+        self._on_stop()
 
     def onPlayBackStopped(self):
         self._on_stop()
